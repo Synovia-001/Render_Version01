@@ -21,9 +21,10 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Render_Version01 - Copy %2810%29.py" />
-    <Compile Include="Render_Version01 - Copy %2811%29.py" />
-    <Compile Include="Render_Version01 - Copy %2812%29.py" />
+    <Compile Include="fusion_dashboard\config.py" />
+    <Compile Include="fusion_dashboard\data_loader.py" />
+    <Compile Include="fusion_dashboard\app.py" />
+    <Compile Include="fusion_dashboard\Render_Version01 - Copy %2812%29.py" />
     <Compile Include="Render_Version01 - Copy %2813%29.py" />
     <Compile Include="Render_Version01 - Copy %2814%29.py" />
     <Compile Include="Render_Version01 - Copy %2815%29.py" />
@@ -47,10 +48,17 @@
     <Compile Include="Render_Version01.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="fusion_dashboard\" />
     <Folder Include="Core\" />
     <Folder Include="Scratch\" />
     <Folder Include="Include\" />
     <Folder Include="Utilities\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="fusion_dashboard\.gitignore" />
+    <Content Include="fusion_dashboard\Procfile" />
+    <Content Include="fusion_dashboard\README.md" />
+    <Content Include="fusion_dashboard\requirements.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
