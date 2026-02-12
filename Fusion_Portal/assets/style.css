@@ -1,0 +1,51 @@
+/* SynoviaFusion Console - basic styling */
+
+.subhead {
+  color: #6c757d;
+  font-size: 0.95rem;
+}
+
+.kpi-card {
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.kpi-title {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.kpi-value {
+  font-size: 2.0rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 6px;
+}
+
+.kpi-hint {
+  font-size: 0.8rem;
+  color: #9aa0a6;
+  margin-top: 8px;
+}
+
+.module-card {
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.module-title {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.module-name {
+  font-weight: 600;
+}
+
+.footer-tip {
+  color: #6c757d;
+  font-size: 0.9rem;
+}

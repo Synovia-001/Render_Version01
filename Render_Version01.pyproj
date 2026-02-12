@@ -25,6 +25,19 @@
     <Compile Include="fusion_dashboard\data_loader.py" />
     <Compile Include="fusion_dashboard\app.py" />
     <Compile Include="fusion_dashboard\Render_Version01 - Copy %2812%29.py" />
+    <Compile Include="Fusion_Portal\app\auth.py" />
+    <Compile Include="Fusion_Portal\app\config.py" />
+    <Compile Include="Fusion_Portal\app\dash_ui.py" />
+    <Compile Include="Fusion_Portal\app\data_access.py" />
+    <Compile Include="Fusion_Portal\app\db.py" />
+    <Compile Include="Fusion_Portal\app\security.py" />
+    <Compile Include="Fusion_Portal\app\server.py" />
+    <Compile Include="Fusion_Portal\app\user_model.py" />
+    <Compile Include="Fusion_Portal\app\__init__.py" />
+    <Compile Include="Fusion_Portal\scripts\create_user.py" />
+    <Compile Include="Fusion_Portal\scripts\hash_password.py" />
+    <Compile Include="Fusion_Portal\scripts\run_sql.py" />
+    <Compile Include="Fusion_Portal\wsgi.py" />
     <Compile Include="Render_Version01 - Copy %2813%29.py" />
     <Compile Include="Render_Version01 - Copy %2814%29.py" />
     <Compile Include="Render_Version01 - Copy %2815%29.py" />
@@ -50,6 +63,13 @@
   <ItemGroup>
     <Folder Include="fusion_dashboard\" />
     <Folder Include="Core\" />
+    <Folder Include="Fusion_Portal\" />
+    <Folder Include="Fusion_Portal\app\" />
+    <Folder Include="Fusion_Portal\app\templates\" />
+    <Folder Include="Fusion_Portal\assets\" />
+    <Folder Include="Fusion_Portal\config\" />
+    <Folder Include="Fusion_Portal\scripts\" />
+    <Folder Include="Fusion_Portal\sql\" />
     <Folder Include="Scratch\" />
     <Folder Include="Include\" />
     <Folder Include="Utilities\" />
@@ -62,6 +82,20 @@
     <Content Include="fusion_dashboard\README.md" />
     <Content Include="fusion_dashboard\requirements.txt" />
     <Content Include="fusion_dashboard\.python-version" />
+    <Content Include="Fusion_Portal\.env.example" />
+    <Content Include="Fusion_Portal\.gitignore" />
+    <Content Include="Fusion_Portal\app\templates\login.html" />
+    <Content Include="Fusion_Portal\assets\style.css" />
+    <Content Include="Fusion_Portal\config\Fusion_Dashboard.ini.example" />
+    <Content Include="Fusion_Portal\Dockerfile" />
+    <Content Include="Fusion_Portal\LICENSE" />
+    <Content Include="Fusion_Portal\README.md" />
+    <Content Include="Fusion_Portal\render.yaml" />
+    <Content Include="Fusion_Portal\requirements.txt" />
+    <Content Include="Fusion_Portal\sql\001_schema.sql" />
+    <Content Include="Fusion_Portal\sql\002_tables.sql" />
+    <Content Include="Fusion_Portal\sql\003_seed_modules.sql" />
+    <Content Include="Fusion_Portal\sql\ddl_all.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
