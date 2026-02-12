@@ -55,10 +55,13 @@
     <Folder Include="Utilities\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="fusion_dashboard\Dockerfile" />
+    <Content Include="fusion_dashboard\.dockerignore" />
     <Content Include="fusion_dashboard\.gitignore" />
     <Content Include="fusion_dashboard\Procfile" />
     <Content Include="fusion_dashboard\README.md" />
     <Content Include="fusion_dashboard\requirements.txt" />
+    <Content Include="fusion_dashboard\.python-version" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
