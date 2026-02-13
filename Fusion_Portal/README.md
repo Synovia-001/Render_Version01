@@ -45,3 +45,7 @@ It includes:
 
 ## Notes on bcrypt / passlib
 We pin bcrypt to a compatible version to avoid Passlib failing at runtime.
+
+
+## Hotfix: Plotly Express dependency
+This version avoids plotly.express to keep the image slim and avoid pandas dependency.

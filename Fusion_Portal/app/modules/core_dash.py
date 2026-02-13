@@ -3,7 +3,7 @@ from __future__ import annotations
 import dash
 from dash import html, dcc, dash_table, Input, Output
 import dash_bootstrap_components as dbc
-import plotly.express as px
+import plotly.graph_objects as go
 from flask import has_request_context
 from flask_login import current_user
 
@@ -17,6 +17,19 @@ def _kpi(title: str, value: str):
         html.Div(title, className="kpi-title"),
         html.Div(value, className="kpi-value"),
     ]), className="kpi-card")
+
+def _top_tables_figure(top_tables: list[dict]):
+    x = [t["table"] for t in top_tables]
+    y = [t["rows"] for t in top_tables]
+
+    fig = go.Figure(data=[go.Bar(x=x, y=y)])
+    fig.update_layout(
+        title="Top tables by row count",
+        margin=dict(l=20, r=20, t=50, b=20),
+        xaxis_title="Table",
+        yaxis_title="Rows",
+    )
+    return fig
 
 def build_layout():
     if not has_request_context():
@@ -57,8 +70,7 @@ def build_layout():
             dbc.Alert(f"Core module failed to load from DB: {type(e).__name__}: {e}", color="danger")
         ], fluid=True, className="pt-4 pb-5")
 
-    fig = px.bar(top_tables, x="table", y="rows", title="Top tables by row count")
-    fig.update_layout(margin=dict(l=20, r=20, t=50, b=20))
+    fig = _top_tables_figure(top_tables)
 
     return dbc.Container([
         header,
