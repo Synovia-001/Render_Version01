@@ -8,7 +8,6 @@ from flask_login import current_user
 
 from .data_access import fetch_kpis_for_user, fetch_modules_for_user, fetch_user_profile
 
-
 def kpi_tile(title: str, value: str, hint: str | None = None):
     return dbc.Card(
         dbc.CardBody([
@@ -18,7 +17,6 @@ def kpi_tile(title: str, value: str, hint: str | None = None):
         ]),
         className="kpi-card"
     )
-
 
 def module_card(name: str, url: str, icon: str | None = None):
     icon_el = html.I(className=icon) if icon else html.Span("")
@@ -30,23 +28,16 @@ def module_card(name: str, url: str, icon: str | None = None):
         className="module-card"
     )
 
-
 def build_layout():
-    # Dash calls layout during app boot / validation (no request context).
-    # In that case Flask-Login current_user may be None. Return a harmless placeholder.
+    # Dash may call layout at startup with no request context.
     if not has_request_context():
         return html.Div()
 
-    # current_user can still be None-ish depending on context; make it bulletproof
     if not getattr(current_user, "is_authenticated", False):
         return dbc.Container([
-            dbc.Alert([
-                "You are not logged in. ",
-                html.A("Go to login", href="/login")
-            ], color="warning")
+            dbc.Alert(["You are not logged in. ", html.A("Go to login", href="/login")], color="warning"),
         ], className="pt-4")
 
-    # From here on, user is authenticated
     user_id = int(current_user.get_id())
 
     header = dbc.Row([
@@ -60,7 +51,6 @@ def build_layout():
         ], className="text-end"), md=2),
     ], className="align-items-center")
 
-    # DB-backed content — protect this so a DB hiccup doesn't crash the whole worker
     try:
         _profile = fetch_user_profile(user_id)
         kpis = fetch_kpis_for_user(user_id)
@@ -68,11 +58,7 @@ def build_layout():
     except Exception as e:
         return dbc.Container([
             header,
-            dbc.Alert(
-                f"Landing page could not load data from the database. "
-                f"Details: {type(e).__name__}: {e}",
-                color="danger"
-            )
+            dbc.Alert(f"Landing page could not load DB data: {type(e).__name__}: {e}", color="danger"),
         ], fluid=True, className="pt-4 pb-5")
 
     kpi_row = dbc.Row(
@@ -92,9 +78,8 @@ def build_layout():
         html.H4("Modules", className="mt-4"),
         module_cards,
         html.Hr(),
-        html.Div("Tip: wire KPI tiles to real SQL queries once your module tables are ready.", className="footer-tip")
+        html.Div("Tip: each module can connect to its own DB using module-specific env vars (e.g. CORE_DB).", className="footer-tip")
     ], fluid=True, className="pt-4 pb-5")
-
 
 def create_dash_app(server):
     app = dash.Dash(

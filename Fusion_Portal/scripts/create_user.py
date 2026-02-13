@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def load_conn_str() -> str:
-    driver = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
+    driver = os.getenv("DB_DRIVER", "ODBC Driver 18 for SQL Server")
     server = os.getenv("DB_SERVER")
     database = os.getenv("DB_DATABASE", "Fusion_Dashboard")
     user = os.getenv("DB_USER")
@@ -28,7 +28,7 @@ def load_conn_str() -> str:
         cfg = configparser.ConfigParser()
         cfg.read(ini_path)
         db = cfg["database"]
-        driver = db.get("driver", f"{{{driver}}}")
+        driver = db.get("driver", driver)
         server = db.get("server", server)
         database = db.get("database", database)
         user = db.get("user", user)
@@ -39,11 +39,7 @@ def load_conn_str() -> str:
         if driver.startswith("{") and driver.endswith("}"):
             driver = driver[1:-1]
 
-    missing = [k for k, v in {
-        "DB_SERVER": server,
-        "DB_USER": user,
-        "DB_PASSWORD": password,
-    }.items() if not v]
+    missing = [k for k, v in {"DB_SERVER": server, "DB_USER": user, "DB_PASSWORD": password}.items() if not v]
     if missing:
         raise SystemExit(f"Missing required DB settings: {', '.join(missing)}")
 
@@ -59,7 +55,7 @@ def load_conn_str() -> str:
     )
 
 def main():
-    ap = argparse.ArgumentParser(description="Create a Fusion Portal user in ADM.Users (with bcrypt password hash).")
+    ap = argparse.ArgumentParser(description="Create a portal user in ADM.Users (bcrypt hash).")
     ap.add_argument("--username", required=True)
     ap.add_argument("--email", required=True)
     ap.add_argument("--first", default=None)

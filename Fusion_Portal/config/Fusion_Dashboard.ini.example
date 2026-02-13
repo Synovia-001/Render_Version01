@@ -1,8 +1,8 @@
 [database]
-driver   = {ODBC Driver 17 for SQL Server}
-server   = your-server.database.windows.net
+driver   = {ODBC Driver 18 for SQL Server}
+server   = futureworks-sdi-db.database.windows.net
 database = Fusion_Dashboard
-user     = your_db_user
-password = your_db_password
+user     = SynFW_DB
+password = REPLACE_ME
 encrypt  = yes
 trust_server_certificate = no

@@ -4,7 +4,7 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Settings:
-    db_driver: str = "ODBC Driver 17 for SQL Server"
+    db_driver: str = "ODBC Driver 18 for SQL Server"
     db_server: str = ""
     db_database: str = "Fusion_Dashboard"
     db_user: str = ""
@@ -13,8 +13,11 @@ class Settings:
     db_trust_server_certificate: str = "no"
     secret_key: str = "change-me"
 
+    # Module DBs
+    core_db: str = ""
+
 def load_settings() -> Settings:
-    # Optional INI support
+    # Optional INI support (local dev). In production prefer env vars.
     ini_path = os.getenv("FUSION_INI_PATH")
     if not ini_path:
         default_ini = Path(__file__).resolve().parents[1] / "config" / "Fusion_Dashboard.ini"
@@ -38,11 +41,12 @@ def load_settings() -> Settings:
                 "db_trust_server_certificate": db.get("trust_server_certificate", "no").strip(),
             }
 
-    # env overrides (Render-friendly)
-    db_driver = os.getenv("DB_DRIVER") or ini_values.get("db_driver") or "ODBC Driver 17 for SQL Server"
+    db_driver = os.getenv("DB_DRIVER") or ini_values.get("db_driver") or "ODBC Driver 18 for SQL Server"
     db_driver = db_driver.strip()
     if db_driver.startswith("{") and db_driver.endswith("}"):
         db_driver = db_driver[1:-1]
+
+    core_db = os.getenv("CORE_DB") or os.getenv("Core_DB") or ""
 
     return Settings(
         db_driver=db_driver,
@@ -53,4 +57,5 @@ def load_settings() -> Settings:
         db_encrypt=os.getenv("DB_ENCRYPT") or ini_values.get("db_encrypt") or "yes",
         db_trust_server_certificate=os.getenv("DB_TRUST_SERVER_CERTIFICATE") or ini_values.get("db_trust_server_certificate") or "no",
         secret_key=os.getenv("SECRET_KEY") or "change-me",
+        core_db=core_db,
     )

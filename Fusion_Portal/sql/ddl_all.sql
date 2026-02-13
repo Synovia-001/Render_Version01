@@ -3,16 +3,12 @@
    Compatible: Microsoft SQL Server / Azure SQL Database
    ========================================================= */
 
--- Create schema ADM if missing
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'ADM')
 BEGIN
     EXEC('CREATE SCHEMA ADM AUTHORIZATION dbo');
 END
 GO
 
-/* ---------------------------
-   ADM.Users
-----------------------------*/
 IF OBJECT_ID('ADM.Users', 'U') IS NULL
 BEGIN
     CREATE TABLE ADM.Users (
@@ -27,15 +23,11 @@ BEGIN
         created_at      DATETIME2(0) NOT NULL CONSTRAINT DF_ADM_Users_created_at DEFAULT SYSDATETIME(),
         last_login      DATETIME2(0) NULL
     );
-
     CREATE UNIQUE INDEX UX_ADM_Users_username ON ADM.Users(username);
     CREATE UNIQUE INDEX UX_ADM_Users_email ON ADM.Users(email);
 END
 GO
 
-/* ---------------------------
-   ADM.UserProfile
-----------------------------*/
 IF OBJECT_ID('ADM.UserProfile', 'U') IS NULL
 BEGIN
     CREATE TABLE ADM.UserProfile (
@@ -49,14 +41,10 @@ BEGIN
         CONSTRAINT CK_ADM_UserProfile_landing_json CHECK (landing_layout IS NULL OR ISJSON(landing_layout) = 1),
         CONSTRAINT CK_ADM_UserProfile_kpi_json CHECK (kpi_preferences IS NULL OR ISJSON(kpi_preferences) = 1)
     );
-
     CREATE UNIQUE INDEX UX_ADM_UserProfile_user_id ON ADM.UserProfile(user_id);
 END
 GO
 
-/* ---------------------------
-   ADM.Modules
-----------------------------*/
 IF OBJECT_ID('ADM.Modules', 'U') IS NULL
 BEGIN
     CREATE TABLE ADM.Modules (
@@ -67,14 +55,10 @@ BEGIN
         is_active    BIT NOT NULL CONSTRAINT DF_ADM_Modules_is_active DEFAULT 1,
         created_at   DATETIME2(0) NOT NULL CONSTRAINT DF_ADM_Modules_created_at DEFAULT SYSDATETIME()
     );
-
     CREATE UNIQUE INDEX UX_ADM_Modules_module_name ON ADM.Modules(module_name);
 END
 GO
 
-/* ---------------------------
-   ADM.UserModuleAccess
-----------------------------*/
 IF OBJECT_ID('ADM.UserModuleAccess', 'U') IS NULL
 BEGIN
     CREATE TABLE ADM.UserModuleAccess (
@@ -87,24 +71,6 @@ BEGIN
         CONSTRAINT FK_ADM_UserModuleAccess_user FOREIGN KEY (user_id) REFERENCES ADM.Users(user_id) ON DELETE CASCADE,
         CONSTRAINT FK_ADM_UserModuleAccess_module FOREIGN KEY (module_id) REFERENCES ADM.Modules(module_id) ON DELETE CASCADE
     );
-
     CREATE UNIQUE INDEX UX_ADM_UserModuleAccess_user_module ON ADM.UserModuleAccess(user_id, module_id);
 END
-GO
-
-/* ---------------------------
-   Seed Modules (idempotent)
-----------------------------*/
-MERGE ADM.Modules AS tgt
-USING (VALUES
-    (N'Programme Dashboard', N'/module/programme', N'bi bi-speedometer2'),
-    (N'Financial Control',   N'/module/finance',   N'bi bi-cash-coin'),
-    (N'Risk Management',     N'/module/risk',      N'bi bi-shield-exclamation'),
-    (N'AI Insights',         N'/module/ai',        N'bi bi-stars')
-) AS src (module_name, module_url, icon)
-ON tgt.module_name = src.module_name
-WHEN NOT MATCHED BY TARGET THEN
-    INSERT (module_name, module_url, icon) VALUES (src.module_name, src.module_url, src.icon)
-WHEN MATCHED THEN
-    UPDATE SET tgt.module_url = src.module_url, tgt.icon = src.icon;
 GO

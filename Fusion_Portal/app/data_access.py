@@ -85,8 +85,28 @@ def fetch_modules_for_user(user_id: int) -> List[dict]:
 
     return [{"name": r[0], "url": r[1], "icon": r[2]} for r in rows]
 
+def user_can_access_url(user_id: int, module_url: str) -> bool:
+    # Accept URLs with or without trailing slash
+    url1 = module_url.rstrip("/")
+    url2 = url1 + "/"
+
+    sql = """
+    SELECT TOP 1 1
+    FROM ADM.Modules m
+    INNER JOIN ADM.UserModuleAccess a ON a.module_id = m.module_id
+    WHERE a.user_id = ?
+      AND a.can_view = 1
+      AND m.is_active = 1
+      AND (m.module_url = ? OR m.module_url = ?)
+    """
+    with get_conn() as conn:
+        cur = conn.cursor()
+        row = cur.execute(sql, user_id, url1, url2).fetchone()
+        cur.close()
+    return bool(row)
+
 def fetch_kpis_for_user(user_id: int) -> List[dict]:
-    # Stub KPIs. Replace each block with real SQL queries against your programme data.
+    # Stub KPIs. Replace with real queries later.
     return [
         {"title": "Active Projects", "value": "14", "hint": "Demo KPI - wire to Projects table"},
         {"title": "Budget Variance", "value": "€1.2M", "hint": "Demo KPI - wire to Finance module"},

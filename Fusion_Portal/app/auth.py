@@ -31,7 +31,12 @@ def login_post():
         flash("Please enter your username/email and password.", "danger")
         return redirect(url_for("auth.login"))
 
-    rec = fetch_user_by_username_or_email(login_value)
+    try:
+        rec = fetch_user_by_username_or_email(login_value)
+    except Exception:
+        flash("Login service unavailable (database connection failed).", "danger")
+        return redirect(url_for("auth.login"))
+
     if not rec:
         flash("Invalid credentials.", "danger")
         return redirect(url_for("auth.login"))
@@ -40,7 +45,13 @@ def login_post():
         flash("Account is inactive. Contact an administrator.", "danger")
         return redirect(url_for("auth.login"))
 
-    if not verify_password(password, rec["password_hash"]):
+    try:
+        ok = verify_password(password, rec["password_hash"])
+    except Exception:
+        flash("Password verification service unavailable.", "danger")
+        return redirect(url_for("auth.login"))
+
+    if not ok:
         flash("Invalid credentials.", "danger")
         return redirect(url_for("auth.login"))
 

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: fusion-portal
+    name: synoviafusion-portal
     env: docker
     plan: standard
     autoDeploy: true
@@ -16,5 +16,7 @@ services:
         sync: false
       - key: DB_DRIVER
         value: ODBC Driver 18 for SQL Server
+      - key: CORE_DB
+        sync: false
       - key: SECRET_KEY
         generateValue: true

@@ -16,17 +16,32 @@ def create_server() -> Flask:
     def healthz():
         return {"status": "ok"}
 
+    # Redirect /module/Core (no slash) -> /module/Core/
+    @server.get("/module/Core")
+    def core_redirect():
+        return redirect("/module/Core/")
+
     @server.before_request
     def require_login():
         path = request.path or ""
+
+        # Public endpoints
         allow_prefixes = ("/login", "/logout", "/healthz", "/assets", "/favicon.ico")
         if path.startswith(allow_prefixes):
             return None
 
-        dash_prefixes = ("/_dash", "/_favicon", "/_reload-hash")
-        if path.startswith(dash_prefixes) or path == "/":
-            if not current_user.is_authenticated:
-                return redirect("/login")
+        # Protect home + modules + dash internal endpoints anywhere
+        needs_auth = (
+            path == "/" or
+            path.startswith("/module/") or
+            "/_dash" in path or
+            "/_favicon" in path or
+            "/_reload-hash" in path
+        )
+
+        if needs_auth and not current_user.is_authenticated:
+            return redirect("/login")
+
         return None
 
     return server
