@@ -5,4 +5,4 @@ plotly==5.23.0
 pyodbc==5.2.0
 gunicorn==22.0.0
 passlib==1.7.4
-bcrypt==4.3.0
+bcrypt==5.0.0
