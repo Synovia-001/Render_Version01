@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from flask_login import current_user
 import dash
 from dash import html
 import dash_bootstrap_components as dbc
+from flask import has_request_context
+from flask_login import current_user
 
 from .data_access import fetch_kpis_for_user, fetch_modules_for_user, fetch_user_profile
+
 
 def kpi_tile(title: str, value: str, hint: str | None = None):
     return dbc.Card(
@@ -17,6 +19,7 @@ def kpi_tile(title: str, value: str, hint: str | None = None):
         className="kpi-card"
     )
 
+
 def module_card(name: str, url: str, icon: str | None = None):
     icon_el = html.I(className=icon) if icon else html.Span("")
     return dbc.Card(
@@ -27,25 +30,50 @@ def module_card(name: str, url: str, icon: str | None = None):
         className="module-card"
     )
 
+
 def build_layout():
-    if not current_user.is_authenticated:
+    # Dash calls layout during app boot / validation (no request context).
+    # In that case Flask-Login current_user may be None. Return a harmless placeholder.
+    if not has_request_context():
+        return html.Div()
+
+    # current_user can still be None-ish depending on context; make it bulletproof
+    if not getattr(current_user, "is_authenticated", False):
         return dbc.Container([
-            dbc.Alert(["You are not logged in. ", html.A("Go to login", href="/login")], color="warning"),
+            dbc.Alert([
+                "You are not logged in. ",
+                html.A("Go to login", href="/login")
+            ], color="warning")
         ], className="pt-4")
 
-    _profile = fetch_user_profile(int(current_user.get_id()))
-    kpis = fetch_kpis_for_user(int(current_user.get_id()))
-    modules = fetch_modules_for_user(int(current_user.get_id()))
+    # From here on, user is authenticated
+    user_id = int(current_user.get_id())
 
     header = dbc.Row([
         dbc.Col(html.Div([
             html.H3("SynoviaFusion — Console", className="mb-0"),
-            html.Div(f"Welcome, {current_user.display_name} • Role: {current_user.role}", className="subhead"),
+            html.Div(f"Welcome, {getattr(current_user, 'display_name', current_user.get_id())} • "
+                     f"Role: {getattr(current_user, 'role', 'User')}", className="subhead"),
         ]), md=10),
         dbc.Col(html.Div([
             html.A("Logout", href="/logout", className="btn btn-outline-secondary btn-sm")
         ], className="text-end"), md=2),
     ], className="align-items-center")
+
+    # DB-backed content — protect this so a DB hiccup doesn't crash the whole worker
+    try:
+        _profile = fetch_user_profile(user_id)
+        kpis = fetch_kpis_for_user(user_id)
+        modules = fetch_modules_for_user(user_id)
+    except Exception as e:
+        return dbc.Container([
+            header,
+            dbc.Alert(
+                f"Landing page could not load data from the database. "
+                f"Details: {type(e).__name__}: {e}",
+                color="danger"
+            )
+        ], fluid=True, className="pt-4 pb-5")
 
     kpi_row = dbc.Row(
         [dbc.Col(kpi_tile(k["title"], k["value"], k.get("hint")), md=3) for k in kpis],
@@ -67,13 +95,15 @@ def build_layout():
         html.Div("Tip: wire KPI tiles to real SQL queries once your module tables are ready.", className="footer-tip")
     ], fluid=True, className="pt-4 pb-5")
 
+
 def create_dash_app(server):
     app = dash.Dash(
         __name__,
         server=server,
         url_base_pathname="/",
         external_stylesheets=[dbc.themes.BOOTSTRAP],
-        title="SynoviaFusion Console"
+        title="SynoviaFusion Console",
+        suppress_callback_exceptions=True
     )
     app.layout = build_layout
     return app
