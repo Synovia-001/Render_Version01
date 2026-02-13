@@ -15,6 +15,6 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: DB_DRIVER
-        value: ODBC Driver 17 for SQL Server
+        value: ODBC Driver 18 for SQL Server
       - key: SECRET_KEY
         generateValue: true
