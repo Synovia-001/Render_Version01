@@ -47,3 +47,9 @@
   color: #6c757d;
   font-size: 0.9rem;
 }
+
+
+/* Plotly graph stability (prevents "expanding" graphs in some layouts) */
+.dash-graph {
+  min-height: 0;
+}

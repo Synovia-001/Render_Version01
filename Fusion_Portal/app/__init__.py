@@ -20,11 +20,13 @@ from __future__ import annotations
 from .server import create_server
 from .dash_ui import create_dash_app
 from .modules.core_dash import create_core_dash_app
+from .modules.epos_dash import create_epos_dash_app
 
 def create_app():
     server = create_server()
     create_dash_app(server)      # `/`
     create_core_dash_app(server) # `/module/Core/`
+    create_epos_dash_app(server) # `/module/EPOS/`
     return server
 
 # Create a single global Flask instance for WSGI servers.
