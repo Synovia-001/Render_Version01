@@ -4,16 +4,13 @@ from dotenv import load_dotenv
 # Load local .env for dev; Render sets env vars directly
 load_dotenv()
 
-from app import create_app  # noqa: E402
+# Import the Flask instance from the package (callable WSGI app)
+from app import server as server  # noqa: E402
 
-# Flask WSGI callable (Flask instance)
-server = create_app()
-
-# Common aliases for WSGI servers
+# WSGI callable for Gunicorn
 app = server
 application = server
 
-# Helpful startup log (no secrets)
 print(f"[WSGI] Loaded Flask app: type={type(app)} callable={callable(app)}", flush=True)
 
 if __name__ == "__main__":

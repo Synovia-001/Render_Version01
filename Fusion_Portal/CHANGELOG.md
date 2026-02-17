@@ -16,3 +16,8 @@
 - Fix: Support legacy Gunicorn app URI `app:server` by exporting a WSGI callable in app/__init__.py
 - Debug: Add startup log showing WSGI app type/callable
 - Safety: Add build-time sanity check to fail early if WSGI app is not callable
+
+## V2.6 (2026-02-17)
+- Fix: Resolve Gunicorn `Application object must be callable` by overriding `app.server` export.
+- Fix: wsgi.py now imports the Flask instance directly (no create_app import dependency).
+- Keeps: build-time WSGI sanity check and ODBC18 + bcrypt pins.

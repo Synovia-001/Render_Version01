@@ -1,2 +1,2 @@
-Fusion_Portal_V2.5
+Fusion_Portal_V2.6
 Build: 2026-02-17
