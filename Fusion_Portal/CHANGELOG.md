@@ -22,9 +22,9 @@
 - Fix: wsgi.py now imports the Flask instance directly (no create_app import dependency).
 - Keeps: build-time WSGI sanity check and ODBC18 + bcrypt pins.
 
-## V2.7 (2026-02-17)
-- Add: Fusion EPOS module at `/module/EPOS/` (week KPIs + charts + anomalies + data explorer)
-- Add: EPOS module DB override via `EPOS_DB` env var (same server + credentials as portal)
-- Add: pandas + openpyxl dependencies to support plotly.express and CSV exports
-- UI: Force stable Plotly graph heights to prevent "expanding" graphs on refresh
-
+## V2.8 (2026-02-17)
+- New: Fusion EPOS module at /module/EPOS/ (DB: EPOS_DB env var)
+- Fix: Graphs no longer expand (responsive off + fixed heights)
+- Improve: Anomalies redesigned (KPIs, top movers chart, clean table, ML anomaly score)
+- Add: Predictive tab (seasonal ridge forecast for next-week Units/Value)
+- Add: Export anomalies CSV button

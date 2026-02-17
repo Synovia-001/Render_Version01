@@ -1,4 +1,4 @@
-# SynoviaFusion — Console Portal (Render) + Core + EPOS Modules
+# SynoviaFusion — Console Portal (Render) + Core Module (Version 02)
 
 This package is a **drop-in** repo you can copy into:
 `D:\Applications\React_Development\Render_Version01\Fusion_Portal`
@@ -7,11 +7,9 @@ It includes:
 - Flask + Dash portal (landing page) at `/`
 - Login at `/login`
 - Core module at `/module/Core/` (live DB-backed explorer + KPIs)
-- EPOS module at `/module/EPOS/` (week-driven KPIs + charts + explorer)
 - Azure SQL connectivity via **ODBC Driver 18** (msodbcsql18 in Docker)
 - Portal DB (users/modules/access): **Fusion_Dashboard**
 - Core DB (module data): set via env var **CORE_DB** (same server + user + password)
-- EPOS DB (module data): set via env var **EPOS_DB** (same server + user + password)
 
 ## Render environment variables (recommended)
 ### Shared DB credentials (same for all databases)
@@ -27,9 +25,6 @@ It includes:
 
 ### Module database (Core module reads from here)
 - `CORE_DB` = `<your Core database name>`
-
-### Module database (EPOS module reads from here)
-- `EPOS_DB` = `<your EPOS database name>`
   - (Alias supported) `Core_DB` also works
 
 ### Flask session security

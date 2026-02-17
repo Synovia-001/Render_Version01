@@ -13,15 +13,12 @@ class Settings:
     db_trust_server_certificate: str = "no"
     secret_key: str = "change-me"
 
-    # Module DBs (optional overrides)
+    # Module DBs
     core_db: str = ""
-    epos_db: str = ""
+        epos_db: str = ""
 
 def load_settings() -> Settings:
-    """Load settings from env vars with optional INI fallback for local dev.
-
-    In production (Render), prefer environment variables.
-    """
+    # Optional INI support (local dev). In production prefer env vars.
     ini_path = os.getenv("FUSION_INI_PATH")
     if not ini_path:
         default_ini = Path(__file__).resolve().parents[1] / "config" / "Fusion_Dashboard.ini"
@@ -51,17 +48,17 @@ def load_settings() -> Settings:
         db_driver = db_driver[1:-1]
 
     core_db = os.getenv("CORE_DB") or os.getenv("Core_DB") or ""
-    epos_db = os.getenv("EPOS_DB") or os.getenv("Epos_DB") or ""
+
+        epos_db = os.getenv("EPOS_DB") or os.getenv("Epos_DB") or ""
 
     return Settings(
         db_driver=db_driver,
-        db_server=os.getenv("DB_SERVER") or ini_values.get("db_server", ""),
+        db_server=os.getenv("DB_SERVER") or ini_values.get("db_server",""),
         db_database=os.getenv("DB_DATABASE") or ini_values.get("db_database") or "Fusion_Dashboard",
-        db_user=os.getenv("DB_USER") or ini_values.get("db_user", ""),
-        db_password=os.getenv("DB_PASSWORD") or ini_values.get("db_password", ""),
+        db_user=os.getenv("DB_USER") or ini_values.get("db_user",""),
+        db_password=os.getenv("DB_PASSWORD") or ini_values.get("db_password",""),
         db_encrypt=os.getenv("DB_ENCRYPT") or ini_values.get("db_encrypt") or "yes",
         db_trust_server_certificate=os.getenv("DB_TRUST_SERVER_CERTIFICATE") or ini_values.get("db_trust_server_certificate") or "no",
         secret_key=os.getenv("SECRET_KEY") or "change-me",
         core_db=core_db,
-        epos_db=epos_db,
     )
