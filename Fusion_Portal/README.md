@@ -49,3 +49,16 @@ We pin bcrypt to a compatible version to avoid Passlib failing at runtime.
 
 ## Hotfix: Plotly Express dependency
 This version avoids plotly.express to keep the image slim and avoid pandas dependency.
+
+## Branding (Logos / CSS)
+
+Place these files in `assets/` (and commit them to git so Render can serve them):
+
+- `assets/FusionLogo.jpg` — **top-left** (platform brand)
+- `assets/RunningBunny.jpg` — **right-side** (Duracell prominence in EPOS)
+- `assets/SynoviaLogoHor.jpg` — **footer** across the page
+- `assets/style.css` — styling for header/footer and layout
+
+Important: Render runs on Linux, so filenames are **case-sensitive**.
+If you rename files locally on Windows, double-check the exact casing in git.
+

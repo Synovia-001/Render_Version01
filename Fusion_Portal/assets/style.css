@@ -52,3 +52,72 @@
 .dash-graph { min-height: 0; }
 .section-title { font-weight: 800; margin: 8px 0 10px 0; }
 .muted { color: #6c757d; font-size: 0.9rem; }
+
+
+/* ---------- Branding ---------- */
+.fusion-page {
+  position: relative;
+  min-height: 100vh;
+}
+
+/* leave room for the Duracell side graphic on desktop */
+.fusion-page.has-side-brand {
+  padding-right: 190px;
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.brand-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-fusion-logo {
+  height: 46px;
+  width: auto;
+}
+
+.brand-title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.brand-side {
+  position: fixed;
+  right: 12px;
+  top: 120px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.brand-duracell-bunny {
+  height: 280px;
+  width: auto;
+  opacity: 0.95;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.25));
+}
+
+.brand-footer {
+  margin-top: 28px;
+  padding: 18px 0 10px 0;
+  text-align: center;
+  opacity: 0.95;
+}
+
+.brand-synovia-logo {
+  width: min(720px, 92%);
+  height: auto;
+}
+
+@media (max-width: 992px) {
+  .fusion-page.has-side-brand { padding-right: 0; }
+  .brand-side { display: none; }
+  .brand-fusion-logo { height: 40px; }
+}

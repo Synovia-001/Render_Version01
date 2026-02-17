@@ -31,7 +31,7 @@ def _top_tables_figure(top_tables: list[dict]):
     )
     return fig
 
-def build_layout():
+def build_layout(asset_url):
     if not has_request_context():
         return html.Div()
 
@@ -49,16 +49,19 @@ def build_layout():
             html.A("Back to Home", href="/", className="btn btn-outline-primary btn-sm mt-2")
         ], className="pt-4")
 
-    header = dbc.Row([
-        dbc.Col(html.Div([
-            html.H3("Fusion Core", className="mb-0"),
-            html.Div("Live module (Core DB) — object KPIs + data explorer", className="subhead"),
-        ]), md=10),
-        dbc.Col(html.Div([
+    header = html.Div([
+        html.Div([
+            html.Img(src=asset_url("FusionLogo.jpg"), className="brand-fusion-logo"),
+            html.Div([
+                html.Div("Fusion Core", className="brand-title"),
+                html.Div("Live module (Core DB) — object KPIs + data explorer", className="subhead"),
+            ])
+        ], className="brand-left"),
+        html.Div([
             html.A("Home", href="/", className="btn btn-outline-primary btn-sm me-2"),
             html.A("Logout", href="/logout", className="btn btn-outline-secondary btn-sm"),
-        ], className="text-end"), md=2),
-    ], className="align-items-center")
+        ])
+    ], className="brand-header")
 
     try:
         counts = fetch_object_counts()
@@ -66,41 +69,47 @@ def build_layout():
         tables = fetch_table_list()
     except Exception as e:
         return dbc.Container([
-            header,
-            dbc.Alert(f"Core module failed to load from DB: {type(e).__name__}: {e}", color="danger")
+            html.Div([
+                header,
+                dbc.Alert(f"Core module failed to load from DB: {type(e).__name__}: {e}", color="danger"),
+                html.Div(html.Img(src=asset_url("SynoviaLogoHor.jpg"), className="brand-synovia-logo"), className="brand-footer"),
+            ], className="fusion-page")
         ], fluid=True, className="pt-4 pb-5")
 
     fig = _top_tables_figure(top_tables)
 
     return dbc.Container([
-        header,
+        html.Div([
+            header,
 
-        dbc.Row([
-            dbc.Col(_kpi("Tables", str(counts["tables"])), md=4),
-            dbc.Col(_kpi("Views", str(counts["views"])), md=4),
-            dbc.Col(_kpi("Stored Procs", str(counts["procs"])), md=4),
-        ], className="mt-3 g-3"),
+            dbc.Row([
+                dbc.Col(_kpi("Tables", str(counts.get("tables"))), md=4),
+                dbc.Col(_kpi("Views", str(counts.get("views"))), md=4),
+                dbc.Col(_kpi("Stored Procs", str(counts.get("procs"))), md=4),
+            ], className="mt-3 g-3"),
 
-        dbc.Row([
-            dbc.Col(dcc.Graph(figure=fig), md=12),
-        ], className="mt-3"),
+            dbc.Row([
+                dbc.Col(dcc.Graph(figure=fig), md=12),
+            ], className="mt-3"),
 
-        html.H4("Data Explorer", className="mt-4"),
+            html.H4("Data Explorer", className="mt-4"),
 
-        dbc.Row([
-            dbc.Col([
-                dcc.Dropdown(
-                    id="core-table",
-                    options=[{"label": t, "value": t} for t in tables],
-                    placeholder="Select a table…",
-                    clearable=True
-                ),
-                html.Div(className="text-muted mt-2", children="Shows TOP 100 rows from selected table (Core DB).")
-            ], md=6),
-        ], className="mt-2"),
+            dbc.Row([
+                dbc.Col([
+                    dcc.Dropdown(
+                        id="core-table",
+                        options=[{"label": t, "value": t} for t in tables],
+                        placeholder="Select a table…",
+                        clearable=True
+                    ),
+                    html.Div(className="text-muted mt-2", children="Shows TOP 100 rows from selected table (Core DB).")
+                ], md=6),
+            ], className="mt-2"),
 
-        html.Div(id="core-preview", className="mt-3"),
+            html.Div(id="core-preview", className="mt-3"),
 
+            html.Div(html.Img(src=asset_url("SynoviaLogoHor.jpg"), className="brand-synovia-logo"), className="brand-footer"),
+        ], className="fusion-page")
     ], fluid=True, className="pt-4 pb-5")
 
 def create_core_dash_app(server):
@@ -112,7 +121,8 @@ def create_core_dash_app(server):
         title="Fusion Core",
         suppress_callback_exceptions=True
     )
-    app.layout = build_layout
+
+    app.layout = (lambda: build_layout(app.get_asset_url))
 
     @app.callback(
         Output("core-preview", "children"),

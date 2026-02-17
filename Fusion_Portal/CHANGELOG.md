@@ -31,3 +31,9 @@
 
 ## V2.9 (2026-02-17)
 - Fix: Clean rewrite of config.py to resolve indentation error during Docker build
+
+## V3.0 (2026-02-17)
+- Restore: EPOS Stores / Products / Store×Product views
+- Add: Platform branding (Fusion top logo, Synovia footer). Duracell Bunny side-brand in EPOS.
+- Upgrade: Predictive uses Holt‑Winters (statsmodels) + ridge fallback; adds change-point detection (ruptures)
+- Add: Supply-chain libraries (statsmodels, ruptures, networkx)

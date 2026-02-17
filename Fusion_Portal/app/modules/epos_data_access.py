@@ -42,6 +42,14 @@ SQL_STOREPROD_WEEKLY_BY_WEEK = "SELECT * FROM CUR.vw_StoreProductWeekly WHERE Ca
 SQL_STOREPROD_ANOM_4W_BY_WEEK = "SELECT * FROM CUR.vw_StoreProductAnomalies_4W WHERE CalendarKey = ?;"
 SQL_STORE_ANOM_4W_BY_WEEK = "SELECT * FROM CUR.vw_StoreAnomalies_4W WHERE CalendarKey = ?;"
 
+SQL_STORE_WEEKLY_BY_STORE = "SELECT * FROM CUR.vw_StoreWeekly WHERE Store_Name = ? ORDER BY Start_Date;"
+SQL_PRODUCT_WEEKLY_BY_CODE = "SELECT * FROM CUR.vw_ProductWeekly WHERE Dynamics_Code = ? ORDER BY Start_Date;"
+
+SQL_STOREPROD_WEEKLY_BY_WEEK_STORE = "SELECT * FROM CUR.vw_StoreProductWeekly WHERE CalendarKey = ? AND Store_Name = ?;"
+SQL_STOREPROD_WEEKLY_BY_WEEK_PRODUCT = "SELECT * FROM CUR.vw_StoreProductWeekly WHERE CalendarKey = ? AND Dynamics_Code = ?;"
+
+SQL_STOREPROD_HISTORY = "SELECT TOP (104) * FROM CUR.vw_StoreProductWeekly WHERE Store_Name = ? AND Dynamics_Code = ? ORDER BY Start_Date DESC;"
+
 @dataclass
 class EposBase:
     latest: pd.DataFrame

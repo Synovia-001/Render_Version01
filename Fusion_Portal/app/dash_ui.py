@@ -8,6 +8,7 @@ from flask_login import current_user
 
 from .data_access import fetch_kpis_for_user, fetch_modules_for_user, fetch_user_profile
 
+
 def kpi_tile(title: str, value: str, hint: str | None = None):
     return dbc.Card(
         dbc.CardBody([
@@ -17,6 +18,7 @@ def kpi_tile(title: str, value: str, hint: str | None = None):
         ]),
         className="kpi-card"
     )
+
 
 def module_card(name: str, url: str, icon: str | None = None):
     icon_el = html.I(className=icon) if icon else html.Span("")
@@ -28,7 +30,8 @@ def module_card(name: str, url: str, icon: str | None = None):
         className="module-card"
     )
 
-def build_layout():
+
+def build_layout(asset_url):
     # Dash may call layout at startup with no request context.
     if not has_request_context():
         return html.Div()
@@ -40,16 +43,22 @@ def build_layout():
 
     user_id = int(current_user.get_id())
 
-    header = dbc.Row([
-        dbc.Col(html.Div([
-            html.H3("SynoviaFusion — Console", className="mb-0"),
-            html.Div(f"Welcome, {getattr(current_user, 'display_name', current_user.get_id())} • "
-                     f"Role: {getattr(current_user, 'role', 'User')}", className="subhead"),
-        ]), md=10),
-        dbc.Col(html.Div([
+    header = html.Div([
+        html.Div([
+            html.Img(src=asset_url("FusionLogo.jpg"), className="brand-fusion-logo"),
+            html.Div([
+                html.Div("SynoviaFusion — Console", className="brand-title"),
+                html.Div(
+                    f"Welcome, {getattr(current_user, 'display_name', current_user.get_id())} • "
+                    f"Role: {getattr(current_user, 'role', 'User')}",
+                    className="subhead"
+                ),
+            ])
+        ], className="brand-left"),
+        html.Div([
             html.A("Logout", href="/logout", className="btn btn-outline-secondary btn-sm")
-        ], className="text-end"), md=2),
-    ], className="align-items-center")
+        ])
+    ], className="brand-header")
 
     try:
         _profile = fetch_user_profile(user_id)
@@ -57,8 +66,9 @@ def build_layout():
         modules = fetch_modules_for_user(user_id)
     except Exception as e:
         return dbc.Container([
-            header,
+            html.Div([header], className="fusion-page"),
             dbc.Alert(f"Landing page could not load DB data: {type(e).__name__}: {e}", color="danger"),
+            html.Div(html.Img(src=asset_url("SynoviaLogoHor.jpg"), className="brand-synovia-logo"), className="brand-footer"),
         ], fluid=True, className="pt-4 pb-5")
 
     kpi_row = dbc.Row(
@@ -73,13 +83,16 @@ def build_layout():
     )
 
     return dbc.Container([
-        header,
-        kpi_row,
-        html.H4("Modules", className="mt-4"),
-        module_cards,
-        html.Hr(),
-        html.Div("Tip: each module can connect to its own DB using module-specific env vars (e.g. CORE_DB).", className="footer-tip")
+        html.Div([
+            header,
+            kpi_row,
+            html.H4("Modules", className="mt-4"),
+            module_cards,
+            html.Div("Tip: Modules shown depend on your user access rows in ADM.UserModuleAccess.", className="footer-tip mt-4"),
+            html.Div(html.Img(src=asset_url("SynoviaLogoHor.jpg"), className="brand-synovia-logo"), className="brand-footer"),
+        ], className="fusion-page")
     ], fluid=True, className="pt-4 pb-5")
+
 
 def create_dash_app(server):
     app = dash.Dash(
@@ -90,5 +103,6 @@ def create_dash_app(server):
         title="SynoviaFusion Console",
         suppress_callback_exceptions=True
     )
-    app.layout = build_layout
+
+    app.layout = (lambda: build_layout(app.get_asset_url))
     return app
