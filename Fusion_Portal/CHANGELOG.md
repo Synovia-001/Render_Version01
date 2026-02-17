@@ -28,3 +28,6 @@
 - Improve: Anomalies redesigned (KPIs, top movers chart, clean table, ML anomaly score)
 - Add: Predictive tab (seasonal ridge forecast for next-week Units/Value)
 - Add: Export anomalies CSV button
+
+## V2.9 (2026-02-17)
+- Fix: Clean rewrite of config.py to resolve indentation error during Docker build
