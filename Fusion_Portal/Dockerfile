@@ -16,7 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# WSGI sanity check (fails build if app is not callable)
+RUN python -c "import wsgi; print('WSGI callable:', callable(getattr(wsgi, 'app', None)), type(getattr(wsgi, 'app', None)))"
+
 # Quick sanity check at build time
 RUN python -c "import pyodbc; print('ODBC drivers:', pyodbc.drivers())"
 
-CMD ["sh", "-c", "gunicorn wsgi:server --workers ${WEB_CONCURRENCY:-2} --threads 4 --bind 0.0.0.0:${PORT:-10000} --timeout 120"]
+CMD ["sh", "-c", "gunicorn wsgi:app --workers ${WEB_CONCURRENCY:-2} --threads 4 --bind 0.0.0.0:${PORT:-10000} --timeout 120"]

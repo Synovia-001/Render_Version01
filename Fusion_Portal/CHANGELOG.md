@@ -7,3 +7,12 @@
 - Login + landing page hardened (boot-safe Dash layout)
 - bcrypt pinned to avoid Passlib/bcrypt incompatibilities on Render
 - Core module chart uses plotly.graph_objects (NO pandas required)
+
+## V2.4 (2026-02-13)
+- Fix: Gunicorn entrypoint hardened (export WSGI callable as wsgi:app)
+- Refactor: move server creation into app.create_app() factory (avoid import side-effects)
+
+## V2.5 (2026-02-17)
+- Fix: Support legacy Gunicorn app URI `app:server` by exporting a WSGI callable in app/__init__.py
+- Debug: Add startup log showing WSGI app type/callable
+- Safety: Add build-time sanity check to fail early if WSGI app is not callable
