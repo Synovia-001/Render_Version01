@@ -21,9 +21,10 @@ def create_server() -> Flask:
     def core_redirect():
         return redirect("/module/Core/")
 
-        @server.get("/module/EPOS")
-        def epos_redirect():
-            return redirect("/module/EPOS/")
+    # Redirect /module/EPOS (no slash) -> /module/EPOS/
+    @server.get("/module/EPOS")
+    def epos_redirect():
+        return redirect("/module/EPOS/")
 
     @server.before_request
     def require_login():

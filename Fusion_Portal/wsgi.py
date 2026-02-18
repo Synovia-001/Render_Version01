@@ -1,18 +1,21 @@
-import os
-from dotenv import load_dotenv
+"""WSGI entrypoint for Gunicorn.
 
-# Load local .env for dev; Render sets env vars directly
-load_dotenv()
+This project embeds multiple Dash apps inside a single Flask server.
 
-# Import the Flask instance from the package (callable WSGI app)
-from app import server as server  # noqa: E402
+⚠️ Naming pitfall:
+The package also contains a submodule named `app.server`.
+If you do `from app import server`, Python can give you the *module* `app.server`
+(not the Flask instance) depending on import order, which makes Gunicorn crash
+with:
 
-# WSGI callable for Gunicorn
-app = server
-application = server
+    Application object must be callable
+
+So we always load the Flask instance via an explicit app-factory and expose it
+as a module-level variable named `app`.
+"""
+
+from app import create_app
+
+app = create_app()
 
 print(f"[WSGI] Loaded Flask app: type={type(app)} callable={callable(app)}", flush=True)
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", "10000"))
-    server.run(host="0.0.0.0", port=port, debug=True)

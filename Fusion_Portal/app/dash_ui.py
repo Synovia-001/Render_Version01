@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import dash
 from dash import html
 import dash_bootstrap_components as dbc
@@ -95,10 +97,16 @@ def build_layout(asset_url):
 
 
 def create_dash_app(server):
+    # Branding assets live at repo-root /assets.
+    # This file lives under /app/app, so without an explicit assets_folder Dash
+    # would look for /app/app/assets and images (logos) would 404.
+    assets_dir = os.path.join(os.path.dirname(__file__), "..", "assets")
+
     app = dash.Dash(
         __name__,
         server=server,
         url_base_pathname="/",
+        assets_folder=assets_dir,
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         title="SynoviaFusion Console",
         suppress_callback_exceptions=True
