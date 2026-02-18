@@ -10,6 +10,7 @@ import pandas as pd
 import json
 import math
 from datetime import datetime
+from pathlib import Path
 
 from ..data_access import user_can_access_url
 from .epos_data_access import (
@@ -28,6 +29,7 @@ from .epos_data_access import (
 from .epos_ml import anomaly_score_storeprod, forecast_next, holt_winters_forecast, detect_change_points
 
 BASE = "/module/EPOS/"
+ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 GRAPH_CONFIG = {"responsive": False, "displayModeBar": True}
 
 def graph(fig, height: int):
@@ -77,46 +79,94 @@ def build_layout(asset_url):
         return html.Div()
 
     if not getattr(current_user, "is_authenticated", False):
-        return dbc.Container([dbc.Alert(["Not logged in. ", html.A("Login", href="/login")], color="warning")], className="pt-4")
+        return dbc.Container(
+            [dbc.Alert(["Not logged in. ", html.A("Login", href="/login")], color="warning")],
+            className="pt-4",
+        )
 
     user_id = int(current_user.get_id())
     if not user_can_access_url(user_id, "/module/EPOS"):
-        return dbc.Container([
-            dbc.Alert("You do not have access to Fusion EPOS.", color="danger"),
-            html.A("Back to Home", href="/", className="btn btn-outline-primary btn-sm mt-2")
-        ], className="pt-4")
+        return dbc.Container(
+            [
+                dbc.Alert("You do not have access to Fusion EPOS.", color="danger"),
+                html.A("Back to Home", href="/", className="btn btn-outline-primary btn-sm mt-2"),
+            ],
+            className="pt-4",
+        )
 
+    # Load cached base datasets. If EPOS_DB isn't configured or the DB is unavailable,
+    # fail gracefully instead of crashing Dash during layout validation.
+    base = None
+    cal = pd.DataFrame()
+    try:
         base = load_base(ttl=300)
 
         # Use CFG.Calenders so the week labels always match the retail calendar (incl. year boundaries)
         cal = calendar_dimension(ttl=3600)
-        if (not cal.empty) and (not base.store_weekly.empty) and ("CalendarKey" in base.store_weekly.columns):
-            keys = set(base.store_weekly["CalendarKey"].astype(str).unique())
-            wkdim = cal[cal["CalendarKey"].astype(str).isin(keys)].copy()
-        elif not cal.empty:
-            wkdim = cal.copy()
-        else:
-            wkdim = week_dimension(base.store_weekly)
+    except Exception as e:
+        return dbc.Container(
+            [
+                dbc.Alert(
+                    [
+                        html.Div("Fusion EPOS could not load required data.", className="fw-bold"),
+                        html.Div(str(e), className="small text-muted"),
+                        html.Div(
+                            "Check Render env vars (EPOS_DB) and confirm the database contains CFG.Calenders and the EPOS views.",
+                            className="small",
+                        ),
+                    ],
+                    color="danger",
+                ),
+                html.A("Back to Home", href="/", className="btn btn-outline-primary btn-sm mt-2"),
+            ],
+            className="pt-4",
+        )
 
-        default_key = latest_key(base)
-        if (default_key is None or str(default_key).strip() == "") and (not wkdim.empty):
-            default_key = str(wkdim.iloc[-1].get("CalendarKey"))
+    # Filter the calendar to only keys present in the facts (prevents showing future weeks with no data).
+    if (
+        (not cal.empty)
+        and (not base.store_weekly.empty)
+        and ("CalendarKey" in base.store_weekly.columns)
+        and ("CalendarKey" in cal.columns)
+    ):
+        keys = set(base.store_weekly["CalendarKey"].astype(str).unique())
+        wkdim = cal[cal["CalendarKey"].astype(str).isin(keys)].copy()
+    elif not cal.empty:
+        wkdim = cal.copy()
+    else:
+        wkdim = week_dimension(base.store_weekly)
 
-        # Week dropdown
-        opts = []
-        if not wkdim.empty:
-            for _, r in wkdim.iterrows():
-                key = str(r.get("CalendarKey"))
-                sd = pd.to_datetime(r.get("Start_Date")).date().isoformat() if pd.notnull(r.get("Start_Date")) else ""
-                ed = ""
-                if "End_Date" in wkdim.columns:
-                    ed = pd.to_datetime(r.get("End_Date")).date().isoformat() if pd.notnull(r.get("End_Date")) else ""
-                if ed:
-                    label = f"{int(r.get('Dunnes_Year'))}-W{int(r.get('Dunnes_Week')):02d} ({sd} → {ed})"
-                else:
-                    label = f"{int(r.get('Dunnes_Year'))}-W{int(r.get('Dunnes_Week')):02d} ({sd})"
-                opts.append({"label": label, "value": key})
-    # Store list
+    default_key = latest_key(base)
+    if (default_key is None or str(default_key).strip() == "") and (not wkdim.empty):
+        default_key = str(wkdim.iloc[-1].get("CalendarKey"))
+
+    # Week dropdown
+    opts = []
+    if not wkdim.empty:
+        for _, r in wkdim.iterrows():
+            key = str(r.get("CalendarKey"))
+            sd = pd.to_datetime(r.get("Start_Date")).date().isoformat() if pd.notnull(r.get("Start_Date")) else ""
+            ed = ""
+            if "End_Date" in wkdim.columns:
+                ed = pd.to_datetime(r.get("End_Date")).date().isoformat() if pd.notnull(r.get("End_Date")) else ""
+
+            dy = r.get("Dunnes_Year")
+            dw = r.get("Dunnes_Week")
+            if pd.notnull(dy) and pd.notnull(dw):
+                try:
+                    y = int(dy)
+                    w = int(dw)
+                    if ed:
+                        label = f"{y}-W{w:02d} ({sd} → {ed})"
+                    else:
+                        label = f"{y}-W{w:02d} ({sd})"
+                except Exception:
+                    label = f"{key} ({sd} → {ed})" if ed else f"{key} ({sd})"
+            else:
+                label = f"{key} ({sd} → {ed})" if ed else f"{key} ({sd})"
+
+            opts.append({"label": label, "value": key})
+# Store list
     stores = []
     if "Store_Name" in base.store_weekly.columns:
         stores = sorted(base.store_weekly["Store_Name"].dropna().astype(str).unique().tolist())
@@ -893,11 +943,40 @@ def _predictive(selected_key: str):
         dbc.Row([dbc.Col(graph(fig_u, 380), md=6), dbc.Col(graph(fig_v, 380), md=6)], className="g-3 mt-2"),
     ], fluid=True, className="p-0")
 
+
+def safe_build_layout(asset_url):
+    """Wrap build_layout so *any* exception becomes a visible error panel (and logs a traceback)."""
+    try:
+        return build_layout(asset_url)
+    except Exception as e:
+        import traceback
+        print("[EPOS] Layout crashed:", e)
+        print(traceback.format_exc())
+        return dbc.Container(
+            [
+                dbc.Alert(
+                    [
+                        html.H4("EPOS layout failed to render", className="alert-heading"),
+                        html.Div(
+                            "Check Render logs for the stack trace. This is usually caused by a missing column/view "
+                            "or a temporary database connectivity issue."
+                        ),
+                        html.Hr(),
+                        html.Pre(str(e), style={"whiteSpace": "pre-wrap"}),
+                    ],
+                    color="danger",
+                )
+            ],
+            fluid=True,
+            className="pt-4",
+        )
+
 def create_epos_dash_app(server):
     app = dash.Dash(
         __name__,
         server=server,
         url_base_pathname=BASE,
+        assets_folder=str(ASSETS_DIR),
         external_stylesheets=[dbc.themes.FLATLY],
         title="Fusion EPOS",
         suppress_callback_exceptions=True,
@@ -906,7 +985,28 @@ def create_epos_dash_app(server):
     def asset_url(filename: str) -> str:
         return app.get_asset_url(filename)
 
-    app.layout = lambda: build_layout(asset_url)
+# Keep the initial layout *static* so Dash doesn't try to build the full (DB-backed) layout
+# during component-suites requests (e.g. plotly.min.js). We render the real UI via a callback.
+app.layout = dbc.Container(
+    [
+        dcc.Location(id="epos-url", refresh=False),
+        html.Div(id="epos-root"),
+    ],
+    fluid=True,
+    className="pt-2 pb-4",
+)
+
+@app.callback(Output("epos-root", "children"), Input("epos-url", "pathname"))
+def _render_epos_root(pathname):
+    base_prefix = BASE.rstrip("/")
+    if pathname and not pathname.startswith(base_prefix):
+        return dbc.Container(
+            [dbc.Alert(f"Route mismatch for EPOS module. Expected prefix: {base_prefix}", color="warning")],
+            fluid=True,
+            className="pt-4",
+        )
+    return safe_build_layout(asset_url)
+
 
     @app.callback(
         Output("epos-body", "children"),

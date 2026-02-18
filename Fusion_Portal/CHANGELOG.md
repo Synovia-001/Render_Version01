@@ -37,3 +37,8 @@
 - Add: Platform branding (Fusion top logo, Synovia footer). Duracell Bunny side-brand in EPOS.
 - Upgrade: Predictive uses Holt‑Winters (statsmodels) + ridge fallback; adds change-point detection (ruptures)
 - Add: Supply-chain libraries (statsmodels, ruptures, networkx)
+
+## V3.3
+- EPOS Dash: static skeleton layout + callback renderer to prevent 'Error loading layout' on component-suites requests.
+- EPOS Dash: safe_build_layout wrapper logs tracebacks and shows a friendly error panel instead of crashing.
+- EPOS Dash: initialize base/cal variables defensively.

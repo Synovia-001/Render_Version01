@@ -6,11 +6,13 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from flask import has_request_context
 from flask_login import current_user
+from pathlib import Path
 
 from ..data_access import user_can_access_url
 from .core_data_access import fetch_object_counts, fetch_table_list, fetch_top_tables, fetch_table_preview
 
 BASE = "/module/Core/"
+ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 
 def _kpi(title: str, value: str):
     return dbc.Card(dbc.CardBody([
@@ -117,6 +119,7 @@ def create_core_dash_app(server):
         __name__,
         server=server,
         url_base_pathname=BASE,
+        assets_folder=str(ASSETS_DIR),
         external_stylesheets=[dbc.themes.BOOTSTRAP],
         title="Fusion Core",
         suppress_callback_exceptions=True
