@@ -7,10 +7,15 @@ import plotly.graph_objects as go
 from flask import has_request_context
 from flask_login import current_user
 import pandas as pd
+import json
+import math
+from datetime import datetime
 
 from ..data_access import user_can_access_url
 from .epos_data_access import (
     load_base,
+    calendar_dimension,
+    load_pack_sizes,
     week_dimension,
     latest_key,
     qdf,
@@ -52,6 +57,21 @@ def kpi(title: str, value: str, hint: str = ""):
         html.Div(hint, className="kpi-hint"),
     ]), className="kpi-card")
 
+
+
+def kpi_action(title, value, hint, button_id, button_text="Review"):
+    return dbc.Card(
+        dbc.CardBody(
+            [
+                html.Div(title, className="kpi-title"),
+                html.Div(value, className="kpi-value"),
+                html.Div(hint, className="kpi-hint"),
+                dbc.Button(button_text, id=button_id, color="primary", size="sm", className="mt-2"),
+            ]
+        ),
+        className="kpi-card",
+    )
+
 def build_layout(asset_url):
     if not has_request_context():
         return html.Div()
@@ -66,25 +86,36 @@ def build_layout(asset_url):
             html.A("Back to Home", href="/", className="btn btn-outline-primary btn-sm mt-2")
         ], className="pt-4")
 
-    base = load_base(ttl=300)
-    wkdim = week_dimension(base.store_weekly)
-    default_key = latest_key(base)
+        base = load_base(ttl=300)
 
-    # Week dropdown
-    opts = []
-    if not wkdim.empty:
-        for _, r in wkdim.iterrows():
-            key = str(r.get("CalendarKey"))
-            sd = r.get("Start_Date")
-            year = r.get("Dunnes_Year")
-            week = r.get("Dunnes_Week")
-            sd_txt = pd.to_datetime(sd).date().isoformat() if pd.notna(sd) else "Unknown"
-            if pd.notna(year) and pd.notna(week):
-                label = f"{int(year)}-W{int(week):02d} ({sd_txt})"
-            else:
-                label = f"{key} ({sd_txt})"
-            opts.append({"label": label, "value": key})
+        # Use CFG.Calenders so the week labels always match the retail calendar (incl. year boundaries)
+        cal = calendar_dimension(ttl=3600)
+        if (not cal.empty) and (not base.store_weekly.empty) and ("CalendarKey" in base.store_weekly.columns):
+            keys = set(base.store_weekly["CalendarKey"].astype(str).unique())
+            wkdim = cal[cal["CalendarKey"].astype(str).isin(keys)].copy()
+        elif not cal.empty:
+            wkdim = cal.copy()
+        else:
+            wkdim = week_dimension(base.store_weekly)
 
+        default_key = latest_key(base)
+        if (default_key is None or str(default_key).strip() == "") and (not wkdim.empty):
+            default_key = str(wkdim.iloc[-1].get("CalendarKey"))
+
+        # Week dropdown
+        opts = []
+        if not wkdim.empty:
+            for _, r in wkdim.iterrows():
+                key = str(r.get("CalendarKey"))
+                sd = pd.to_datetime(r.get("Start_Date")).date().isoformat() if pd.notnull(r.get("Start_Date")) else ""
+                ed = ""
+                if "End_Date" in wkdim.columns:
+                    ed = pd.to_datetime(r.get("End_Date")).date().isoformat() if pd.notnull(r.get("End_Date")) else ""
+                if ed:
+                    label = f"{int(r.get('Dunnes_Year'))}-W{int(r.get('Dunnes_Week')):02d} ({sd} → {ed})"
+                else:
+                    label = f"{int(r.get('Dunnes_Year'))}-W{int(r.get('Dunnes_Week')):02d} ({sd})"
+                opts.append({"label": label, "value": key})
     # Store list
     stores = []
     if "Store_Name" in base.store_weekly.columns:
@@ -160,6 +191,7 @@ def build_layout(asset_url):
         dbc.Tab(label="Products", tab_id="products"),
         dbc.Tab(label="Store × Product", tab_id="sp"),
         dbc.Tab(label="Anomalies", tab_id="anom"),
+        dbc.Tab(label="Suggested Orders", tab_id="orders"),
         dbc.Tab(label="Explorer", tab_id="exp"),
         dbc.Tab(label="Predictive", tab_id="pred"),
     ], id="epos-tabs", active_tab="ov", className="mt-3")
@@ -204,12 +236,32 @@ def _overview(selected_key: str):
     fig_tr = go.Figure(go.Scatter(x=trend["Start_Date"], y=trend["Units"], mode="lines+markers", name="Units"))
     fig_tr.update_layout(title="Units Trend (26 weeks)")
 
+    # Suggested Orders (rate-of-sale → cases)
+    orders_df = _compute_suggested_orders(
+        week=str(selected_key),
+        store=None,
+        cover_weeks=1,
+        safety_pct=10,
+        default_units_per_case=12,
+        limit=250,
+    )
+    if orders_df is None or orders_df.empty:
+        orders_value = "0 lines"
+        orders_hint = "No suggestions (check data / pack sizes)"
+    else:
+        orders_value = f"{len(orders_df)} lines"
+        try:
+            total_cases = int(pd.to_numeric(orders_df["Suggested_Cases"], errors="coerce").fillna(0).sum())
+        except Exception:
+            total_cases = 0
+        orders_hint = f"{total_cases} cases • click Review"
+
     return dbc.Container([
         dbc.Row([
             dbc.Col(kpi("Units (week)", num(total_units), f"WoW: {pct(wow_units)}"), md=3),
             dbc.Col(kpi("Value (week)", money(total_value), f"WoW: {pct(wow_value)}"), md=3),
             dbc.Col(kpi("Stores active", num(cur["Store_Name"].nunique()), "Stores with sales"), md=3),
-            dbc.Col(kpi("Rows", num(len(cur)), "Store-week rows"), md=3),
+            dbc.Col(kpi_action("Suggested Orders", orders_value, orders_hint, "go-orders", "Review"), md=3),
         ], className="g-3"),
         dbc.Row([dbc.Col(graph(fig_tr, 360), md=6), dbc.Col(graph(fig_top, 520), md=6)], className="g-3 mt-2"),
         dbc.Alert("Tip: choose a store or product in the controls to unlock deeper views.", color="secondary", className="mt-3"),
@@ -440,6 +492,328 @@ def _anomalies(selected_key: str, thresh: int):
         dbc.Alert("Anomalies are loaded from CUR.vw_StoreProductAnomalies_4W for the selected week.", color="secondary", className="mt-3")
     ], fluid=True, className="p-0")
 
+
+def _orders_summary(rows: list[dict]) -> html.Div:
+    if not rows:
+        return html.Div("No suggestions for the current filters.", className="muted")
+
+    total_lines = len(rows)
+    total_cases = int(sum(float(r.get("Suggested_Cases") or 0) for r in rows))
+    total_units = int(sum(float(r.get("Suggested_Units") or 0) for r in rows))
+    yes = sum(1 for r in rows if str(r.get("Approve", "")).lower() == "yes")
+    no = sum(1 for r in rows if str(r.get("Approve", "")).lower() == "no")
+
+    return html.Div(
+        [
+            html.Span(f"Lines: {total_lines}  •  Units: {total_units:,}  •  Cases: {total_cases:,}"),
+            html.Span(f"  •  Approved: {yes}  •  Rejected: {no}", className="ms-2 muted"),
+        ]
+    )
+
+
+def _compute_suggested_orders(
+    week: str,
+    store: str | None,
+    cover_weeks: float = 1.0,
+    safety_pct: float = 10.0,
+    default_units_per_case: int = 12,
+    limit: int = 250,
+) -> pd.DataFrame:
+    """Compute suggested replenishment orders (cases) using 4-week rate-of-sale.
+
+    Notes:
+    - EPOS sales are in units.
+    - Replenishment is in full cases. We convert using CFG.ReplenishmentPack.Units_Per_Case
+      (fallback to default_units_per_case when missing).
+    """
+    df = qdf(SQL_STOREPROD_ANOM_4W_BY_WEEK, [week], ttl=300)
+    if df.empty:
+        return df
+
+    d = df.copy()
+
+    # Filter store (location) if provided
+    if store:
+        d = d[d.get("Store_Name").astype(str) == str(store)]
+
+    # Numeric hygiene
+    d["Units"] = pd.to_numeric(d.get("Units"), errors="coerce").fillna(0.0)
+    d["Base_Units_4W"] = pd.to_numeric(d.get("Base_Units_4W"), errors="coerce").fillna(0.0)
+
+    # Rate-of-sale: 4-week baseline average per week; fallback to current week units if baseline missing
+    d["Rate_Units_per_Week"] = d["Base_Units_4W"] / 4.0
+    missing_rate = d["Rate_Units_per_Week"] <= 0
+    if missing_rate.any():
+        d.loc[missing_rate, "Rate_Units_per_Week"] = d.loc[missing_rate, "Units"]
+
+    # Forecast consumption over cover window + safety
+    cw = float(cover_weeks or 1.0)
+    sp = float(safety_pct or 0.0) / 100.0
+    d["Forecast_Units"] = d["Rate_Units_per_Week"] * cw * (1.0 + sp)
+
+    # Suggested units (round up to whole units)
+    d["Suggested_Units"] = d["Forecast_Units"].apply(lambda x: int(math.ceil(x)) if x and x > 0 else 0)
+
+    # Pack sizes (units per case)
+    d["Dynamics_Code"] = d.get("Dynamics_Code").astype(str)
+    pack = load_pack_sizes(ttl=3600)
+    if not pack.empty and "Dynamics_Code" in pack.columns:
+        d = d.merge(pack, how="left", on="Dynamics_Code")
+    else:
+        d["Units_Per_Case"] = None
+        d["Case_Multiple"] = 1
+
+    # Track whether the pack size was mapped or defaulted
+    _upc_raw = pd.to_numeric(d.get("Units_Per_Case"), errors="coerce")
+    had_pack = _upc_raw.notna()
+
+    d["Units_Per_Case"] = (
+        _upc_raw.fillna(default_units_per_case)
+        .replace(0, default_units_per_case)
+        .astype(int)
+    )
+    d["Case_Multiple"] = pd.to_numeric(d.get("Case_Multiple", 1), errors="coerce").fillna(1).astype(int)
+
+    d["Pack_Source"] = had_pack.apply(lambda x: "Mapped" if bool(x) else "Default")
+
+    # Convert to cases (round up to full cases, then to any case multiple)
+    d["Suggested_Cases_Raw"] = (d["Suggested_Units"] / d["Units_Per_Case"]).apply(lambda x: int(math.ceil(x)) if x and x > 0 else 0)
+
+    def _round_multiple(cases: int, multiple: int) -> int:
+        m = max(int(multiple or 1), 1)
+        if cases <= 0:
+            return 0
+        return int(math.ceil(cases / m) * m)
+
+    d["Suggested_Cases"] = d.apply(lambda r: _round_multiple(int(r["Suggested_Cases_Raw"]), int(r["Case_Multiple"])), axis=1)
+
+    # Keep meaningful suggestions
+    d = d[d["Suggested_Cases"] > 0].copy()
+
+    # Rank: biggest order first
+    d = d.sort_values(["Suggested_Cases", "Suggested_Units"], ascending=[False, False])
+
+    keep_cols = [
+        "Store_Name",
+        "Dynamics_Code",
+        "Product_Description",
+        "Units",
+        "Rate_Units_per_Week",
+        "Suggested_Units",
+        "Units_Per_Case",
+        "Case_Multiple",
+        "Suggested_Cases",
+        "Pack_Source",
+    ]
+    for c in keep_cols:
+        if c not in d.columns:
+            d[c] = None
+
+    out = d[keep_cols].head(int(limit)).copy()
+    out.rename(
+        columns={
+            "Store_Name": "Store",
+            "Dynamics_Code": "Dynamics_Code",
+            "Product_Description": "Product",
+            "Units": "EPOS_Units_ThisWeek",
+            "Rate_Units_per_Week": "Rate_Units_PerWeek",
+        },
+        inplace=True,
+    )
+    out["Approve"] = ""
+    return out
+
+
+def _suggested_orders(week: str, store: str | None) -> dbc.Container:
+    # Defaults (user can tweak)
+    default_cover = 1
+    default_safety = 10
+    default_upc = 12  # fallback when pack size mapping isn't available
+
+    df = _compute_suggested_orders(
+        week=week,
+        store=store,
+        cover_weeks=default_cover,
+        safety_pct=default_safety,
+        default_units_per_case=default_upc,
+        limit=250,
+    )
+    rows = df.to_dict("records") if not df.empty else []
+
+    controls = dbc.Card(
+        dbc.CardBody(
+            [
+                html.Div(
+                    [
+                        html.H4("Suggested Orders", className="mb-1"),
+                        html.Div(
+                            "Rate-of-sale driven replenishment suggestions (EPOS units → full cases). "
+                            "Approve lines, then export as JSON for downstream ordering.",
+                            className="muted",
+                        ),
+                    ],
+                    className="mb-3",
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                dbc.Label("Weeks of cover"),
+                                dcc.Slider(
+                                    id="orders-cover",
+                                    min=1,
+                                    max=4,
+                                    step=1,
+                                    value=default_cover,
+                                    marks={i: str(i) for i in range(1, 5)},
+                                ),
+                            ],
+                            md=4,
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Safety %"),
+                                dcc.Slider(
+                                    id="orders-safety",
+                                    min=0,
+                                    max=50,
+                                    step=5,
+                                    value=default_safety,
+                                    marks={0: "0", 10: "10", 20: "20", 30: "30", 40: "40", 50: "50"},
+                                ),
+                            ],
+                            md=4,
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Default Units / Case (fallback)"),
+                                dbc.Input(
+                                    id="orders-default-upc",
+                                    type="number",
+                                    min=1,
+                                    step=1,
+                                    value=default_upc,
+                                ),
+                                html.Div("Tip: load CFG.ReplenishmentPack to avoid defaults.", className="muted mt-1"),
+                            ],
+                            md=4,
+                        ),
+                    ],
+                    className="g-3",
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                dbc.Label("Order location (free text)"),
+                                dbc.Input(
+                                    id="orders-location",
+                                    placeholder="e.g., Store name / depot / route",
+                                    value=store or "",
+                                ),
+                            ],
+                            md=6,
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Order reference"),
+                                dbc.Input(
+                                    id="orders-ref",
+                                    placeholder="e.g., PO-12345 / Week 2601",
+                                    value=f"Week {week}",
+                                ),
+                            ],
+                            md=6,
+                        ),
+                    ],
+                    className="g-3 mt-1",
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.Button("Mark all YES", id="orders-yes-all", color="success", className="me-2"),
+                            md="auto",
+                        ),
+                        dbc.Col(
+                            dbc.Button("Mark all NO", id="orders-no-all", color="secondary", className="me-2"),
+                            md="auto",
+                        ),
+                        dbc.Col(
+                            dbc.Button("Export approved lines as JSON", id="orders-export-json", color="primary"),
+                            md="auto",
+                        ),
+                        dbc.Col(html.Div(id="orders-summary", children=_orders_summary(rows)), md=True),
+                    ],
+                    className="g-2 align-items-center mt-3",
+                ),
+                dcc.Download(id="orders-json-download"),
+                dcc.Store(id="orders-context", data={"week": week, "store": store}),
+            ]
+        ),
+        className="mb-3",
+    )
+
+    table = dash_table.DataTable(
+        id="orders-table",
+        columns=[
+            {"name": "Approve (Yes/No)", "id": "Approve", "presentation": "dropdown"},
+            {"name": "Store", "id": "Store"},
+            {"name": "Dynamics Code", "id": "Dynamics_Code"},
+            {"name": "Product", "id": "Product"},
+            {"name": "EPOS Units (This Week)", "id": "EPOS_Units_ThisWeek", "type": "numeric"},
+            {"name": "Rate (Units / Week)", "id": "Rate_Units_PerWeek", "type": "numeric"},
+            {"name": "Suggested Units", "id": "Suggested_Units", "type": "numeric"},
+            {"name": "Units / Case", "id": "Units_Per_Case", "type": "numeric", "editable": True},
+            {"name": "Case Multiple", "id": "Case_Multiple", "type": "numeric"},
+            {"name": "Suggested Cases", "id": "Suggested_Cases", "type": "numeric"},
+            {"name": "Pack Source", "id": "Pack_Source"},
+        ],
+        data=rows,
+        editable=True,
+        dropdown={
+            "Approve": {
+                "options": [
+                    {"label": "", "value": ""},
+                    {"label": "Yes", "value": "Yes"},
+                    {"label": "No", "value": "No"},
+                ]
+            }
+        },
+        filter_action="native",
+        sort_action="native",
+        page_action="native",
+        page_size=20,
+        style_table={"overflowX": "auto"},
+        style_cell={
+            "padding": "8px",
+            "fontFamily": "Montserrat, Segoe UI, Arial",
+            "fontSize": "13px",
+            "whiteSpace": "normal",
+            "height": "auto",
+            "minWidth": "120px",
+            "width": "120px",
+            "maxWidth": "360px",
+        },
+        style_header={
+            "backgroundColor": "#0b1533",
+            "color": "white",
+            "fontWeight": "700",
+        },
+        style_data_conditional=[
+            {
+                "if": {"filter_query": '{Approve} = "Yes"'},
+                "fontWeight": "700",
+            },
+            {
+                "if": {"filter_query": '{Pack_Source} = "Default"'},
+                "color": "#b45309",
+            },
+        ],
+    )
+
+    return dbc.Container([controls, table], fluid=True)
+
+
 def _explorer(selected_key: str):
     df = qdf(SQL_STOREPROD_WEEKLY_BY_WEEK, [str(selected_key)], ttl=120)
     if df.empty:
@@ -555,6 +929,8 @@ def create_epos_dash_app(server):
             return _store_product(str(week), store, product)
         if tab == "anom":
             return _anomalies(str(week), int(thresh or 20))
+        if tab == "orders":
+            return _suggested_orders(str(week), store)
         if tab == "exp":
             return _explorer(str(week))
         if tab == "pred":
@@ -590,5 +966,161 @@ def create_epos_dash_app(server):
         from .epos_data_access import clear_cache
         clear_cache()
         return week
+
+
+
+    # Quick nav: tile button on Overview → Suggested Orders tab
+    @app.callback(
+        Output("epos-tabs", "active_tab"),
+        Input("go-orders", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def _go_orders(_n):
+        return "orders"
+
+    @app.callback(
+        Output("orders-table", "data"),
+        Output("orders-summary", "children"),
+        Input("orders-cover", "value"),
+        Input("orders-safety", "value"),
+        Input("orders-default-upc", "value"),
+        Input("orders-yes-all", "n_clicks"),
+        Input("orders-no-all", "n_clicks"),
+        Input("orders-table", "data_timestamp"),
+        State("orders-context", "data"),
+        State("orders-table", "data"),
+        prevent_initial_call=True,
+    )
+    def _update_orders(cover, safety, default_upc, yes_all, no_all, table_ts, ctx_data, current_rows):
+        trig = ctx.triggered_id
+        rows = current_rows or []
+
+        if trig in ("orders-yes-all", "orders-no-all") and rows:
+            val = "Yes" if trig == "orders-yes-all" else "No"
+            for r in rows:
+                r["Approve"] = val
+            return rows, _orders_summary(rows)
+
+        if trig == "orders-table" and rows:
+            # Recalculate cases if Units_Per_Case was edited in-table
+            for r in rows:
+                try:
+                    upc = int(float(r.get("Units_Per_Case") or 0))
+                    upc = upc if upc > 0 else 1
+                except Exception:
+                    upc = 1
+                try:
+                    mult = int(float(r.get("Case_Multiple") or 1))
+                    mult = mult if mult > 0 else 1
+                except Exception:
+                    mult = 1
+                try:
+                    su = int(float(r.get("Suggested_Units") or 0))
+                except Exception:
+                    su = 0
+                raw = int(math.ceil(su / upc)) if (su > 0 and upc > 0) else 0
+                r["Suggested_Cases"] = int(math.ceil(raw / mult) * mult) if raw > 0 else 0
+            return rows, _orders_summary(rows)
+
+        # Recompute from source data (rate-of-sale → cases)
+        week = str((ctx_data or {}).get("week") or "")
+        store = (ctx_data or {}).get("store")
+
+        df = _compute_suggested_orders(
+            week=week,
+            store=store,
+            cover_weeks=float(cover or 1),
+            safety_pct=float(safety or 0),
+            default_units_per_case=int(default_upc or 12),
+            limit=250,
+        )
+        new_rows = df.to_dict("records") if df is not None and (not df.empty) else []
+        return new_rows, _orders_summary(new_rows)
+
+    @app.callback(
+        Output("orders-json-download", "data"),
+        Input("orders-export-json", "n_clicks"),
+        State("orders-context", "data"),
+        State("orders-location", "value"),
+        State("orders-ref", "value"),
+        State("orders-table", "data"),
+        prevent_initial_call=True,
+    )
+    def _export_orders_json(_n, ctx_data, location, order_ref, rows):
+        if not rows:
+            return no_update
+
+        week = str((ctx_data or {}).get("week") or "")
+        store = (ctx_data or {}).get("store")
+
+        approved = [r for r in rows if str(r.get("Approve", "")).lower() == "yes"]
+
+        # Week metadata (nice-to-have, also helps with 'date out of sync' confusion)
+        week_meta = {"CalendarKey": week}
+        try:
+            cal = calendar_dimension(ttl=3600)
+            hit = cal[cal["CalendarKey"].astype(str) == str(week)]
+            if not hit.empty:
+                r0 = hit.iloc[0]
+                week_meta = {
+                    "CalendarKey": str(r0.get("CalendarKey")),
+                    "Dunnes_Year": int(r0.get("Dunnes_Year")) if pd.notnull(r0.get("Dunnes_Year")) else None,
+                    "Dunnes_Week": int(r0.get("Dunnes_Week")) if pd.notnull(r0.get("Dunnes_Week")) else None,
+                    "Start_Date": pd.to_datetime(r0.get("Start_Date")).date().isoformat() if pd.notnull(r0.get("Start_Date")) else None,
+                    "End_Date": pd.to_datetime(r0.get("End_Date")).date().isoformat() if pd.notnull(r0.get("End_Date")) else None,
+                    "ISO_Year": int(r0.get("ISO_Year")) if pd.notnull(r0.get("ISO_Year")) else None,
+                    "ISO_Week_Start": int(r0.get("ISO_Week_Start")) if pd.notnull(r0.get("ISO_Week_Start")) else None,
+                    "ISO_Week_End": int(r0.get("ISO_Week_End")) if pd.notnull(r0.get("ISO_Week_End")) else None,
+                }
+        except Exception:
+            pass
+
+        # Export lines (recalculate cases at export time to reflect any edits)
+        lines = []
+        for r in approved:
+            try:
+                upc = int(float(r.get("Units_Per_Case") or 0))
+                upc = upc if upc > 0 else 1
+            except Exception:
+                upc = 1
+            try:
+                mult = int(float(r.get("Case_Multiple") or 1))
+                mult = mult if mult > 0 else 1
+            except Exception:
+                mult = 1
+            try:
+                su = int(float(r.get("Suggested_Units") or 0))
+            except Exception:
+                su = 0
+            raw = int(math.ceil(su / upc)) if (su > 0 and upc > 0) else 0
+            cases = int(math.ceil(raw / mult) * mult) if raw > 0 else 0
+
+            lines.append(
+                {
+                    "store": r.get("Store"),
+                    "dynamics_code": r.get("Dynamics_Code"),
+                    "product": r.get("Product"),
+                    "epos_units_this_week": r.get("EPOS_Units_ThisWeek"),
+                    "rate_units_per_week": r.get("Rate_Units_PerWeek"),
+                    "suggested_units": su,
+                    "units_per_case": upc,
+                    "case_multiple": mult,
+                    "suggested_cases": cases,
+                }
+            )
+
+        payload = {
+            "module": "Fusion EPOS",
+            "generated_at_utc": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+            "week": week_meta,
+            "store_filter": store,
+            "order_location": location or store or "",
+            "order_reference": order_ref or f"Week {week}",
+            "lines": lines,
+        }
+
+        fn_store = str(store).replace(" ", "_") if store else "ALL"
+        filename = f"suggested_orders_{week}_{fn_store}.json"
+        return dcc.send_string(json.dumps(payload, indent=2), filename=filename)
 
     return app
