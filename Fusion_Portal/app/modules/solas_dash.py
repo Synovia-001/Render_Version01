@@ -156,7 +156,7 @@ def _empty_state(message: str):
             html.Div(message),
             html.Hr(),
             html.Div(
-                "Tip: set SOLAS_DB (and optionally SOLAS_SCHEMA) in Render env vars to enable Solas data.",
+                "Tip: set SOLAS_DATABASE (and optionally SOLAS_SCHEMA) in Render env vars to enable Solas data.",
                 className="text-muted",
             ),
         ],
@@ -236,7 +236,7 @@ def build_layout(asset_url):
                 ),
                 _empty_state(
                     "No Solas data was found (or the module is not configured yet). "
-                    "This module expects Solas tables/views in the SOLAS_DB database."
+                    "This module expects Solas tables/views in the SOLAS_DATABASE database."
                 ),
             ],
             fluid=True,
@@ -415,7 +415,7 @@ def _filter_by_date(df: pd.DataFrame, start_date: Optional[str], end_date: Optio
     return d
 
 
-def create_solas_dash_app(server, url_base_pathname: str = "/module/Solas/"):
+    url_base_pathname: str = "/module/Fusion_Solas/",
     """Attach the Solas Dash app to the provided Flask server."""
 
     base_url = url_base_pathname.rstrip("/")

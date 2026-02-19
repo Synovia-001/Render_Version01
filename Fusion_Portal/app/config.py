@@ -50,7 +50,7 @@ def load_settings() -> Settings:
 
     core_db = os.getenv("CORE_DB") or os.getenv("Core_DB") or ""
     epos_db = os.getenv("EPOS_DB") or os.getenv("Epos_DB") or ""
-    solas_db = os.getenv("SOLAS_DB") or os.getenv("Solas_DB") or ""
+    solas_db = os.getenv("SOLAS_DATABASE") or os.getenv("SOLAS_DB") or ""
     solas_schema = os.getenv("SOLAS_SCHEMA") or os.getenv("Solas_SCHEMA") or "dbo"
 
     return Settings(

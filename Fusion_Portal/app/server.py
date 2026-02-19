@@ -28,19 +28,16 @@ def create_server() -> Flask:
     def epos_redirect():
         return redirect("/module/EPOS/")
 
-    # Redirect /module/Solas (no slash) -> /module/Solas/
-    @server.get("/module/Solas")
-    def solas_redirect():
-        return redirect("/module/Solas/")
 
-    # Backwards-compat redirect for older module naming
-    @server.get("/module/Fusion_Solas")
-    def solas_legacy_redirect():
-        return redirect("/module/Solas/")
+# Redirect legacy & convenience routes for Solas
+@server.route("/module/Fusion_Solas")
+def go_solas():
+    return redirect("/module/Fusion_Solas/", code=302)
 
-    @server.get("/module/Fusion_Solas/")
-    def solas_legacy_redirect2():
-        return redirect("/module/Solas/")
+@server.route("/module/Solas")
+@server.route("/module/Solas/")
+def go_solas_legacy():
+    return redirect("/module/Fusion_Solas/", code=302)
 
     @server.before_request
     def require_login():

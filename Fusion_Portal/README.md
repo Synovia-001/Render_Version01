@@ -1,4 +1,4 @@
-# SynoviaFusion — Console Portal (Render) + Core Module (Version 02)
+# SynoviaFusion — Portal + Modules (Render) — V3.8
 
 This package is a **drop-in** repo you can copy into:
 `D:\Applications\React_Development\Render_Version01\Fusion_Portal`
@@ -26,6 +26,15 @@ It includes:
 ### Module database (Core module reads from here)
 - `CORE_DB` = `<your Core database name>`
   - (Alias supported) `Core_DB` also works
+
+### Module database (EPOS module reads from here)
+- `EPOS_DB` = `<your EPOS database name>`
+  - (Alias supported) `Epos_DB` also works
+
+### Module database (Fusion_Solas module reads from here)
+- `SOLAS_DATABASE` = `Synovia_Programme_Manager` (or your target database)
+  - (Alias supported) `SOLAS_DB` also works
+- `SOLAS_SCHEMA` = `dbo` (optional, if Solas tables are in a different schema)
 
 ### Flask session security
 - `SECRET_KEY` = long random string
