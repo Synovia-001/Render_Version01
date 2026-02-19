@@ -19,6 +19,7 @@ from .server import create_server
 from .dash_ui import create_dash_app
 from .modules.core_dash import create_core_dash_app
 from .modules.epos_dash import create_epos_dash_app
+from .modules.solas_dash import create_solas_dash_app
 
 
 def create_app():
@@ -32,5 +33,6 @@ def create_app():
     # Modules
     create_core_dash_app(server)
     create_epos_dash_app(server)
+    create_solas_dash_app(server)
 
     return server

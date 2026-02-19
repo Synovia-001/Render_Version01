@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dash
-from dash import html, dcc, dash_table, Input, Output, State, no_update, ctx
+from dash import html, dcc, dash_table, Input, Output, State, no_update
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from flask import has_request_context
@@ -552,12 +552,11 @@ def _orders_summary(rows: list[dict]) -> html.Div:
     total_units = int(sum(float(r.get("Suggested_Units") or 0) for r in rows))
     yes = sum(1 for r in rows if str(r.get("Approve", "")).lower() == "yes")
     no = sum(1 for r in rows if str(r.get("Approve", "")).lower() == "no")
-    pending = total_lines - yes - no
 
     return html.Div(
         [
             html.Span(f"Lines: {total_lines}  •  Units: {total_units:,}  •  Cases: {total_cases:,}"),
-            html.Span(f"  •  Approved: {yes}  •  Rejected: {no}  •  Pending: {pending}", className="ms-2 muted"),
+            html.Span(f"  •  Approved: {yes}  •  Rejected: {no}", className="ms-2 muted"),
         ]
     )
 
@@ -639,8 +638,6 @@ def _compute_suggested_orders(
     d["Suggested_Cases"] = d.apply(lambda r: _round_multiple(int(r["Suggested_Cases_Raw"]), int(r["Case_Multiple"])), axis=1)
 
     # Keep meaningful suggestions
-    # Round units UP to match the case rounding (units & cases never disagree)
-    d["Suggested_Units"] = (d["Suggested_Cases"] * d["Units_Per_Case"]).astype(int)
     d = d[d["Suggested_Cases"] > 0].copy()
 
     # Rank: biggest order first
@@ -673,7 +670,7 @@ def _compute_suggested_orders(
         },
         inplace=True,
     )
-    out["Approve"] = "Pending"
+    out["Approve"] = ""
     return out
 
 
@@ -784,47 +781,18 @@ def _suggested_orders(week: str, store: str | None) -> dbc.Container:
                 dbc.Row(
                     [
                         dbc.Col(
-                            dbc.ButtonGroup(
-                                [
-                                    dbc.Button("✅ YES (Selected)", id="orders-mark-yes", color="success", size="sm"),
-                                    dbc.Button("❌ NO (Selected)", id="orders-mark-no", color="danger", size="sm"),
-                                    dbc.Button("Reset", id="orders-mark-pending", color="secondary", size="sm"),
-                                ],
-                                size="sm",
-                            ),
-                            width="auto",
+                            dbc.Button("Mark all YES", id="orders-yes-all", color="success", className="me-2"),
+                            md="auto",
                         ),
                         dbc.Col(
-                            html.Small(
-                                "Select rows, then click YES/NO. Units are rounded up to full cases.",
-                                className="text-muted",
-                            ),
-                            className="d-none d-md-block",
-                            width="auto",
+                            dbc.Button("Mark all NO", id="orders-no-all", color="secondary", className="me-2"),
+                            md="auto",
                         ),
                         dbc.Col(
-                            dbc.ButtonGroup(
-                                [
-                                    dbc.Button("YES All", id="orders-yes-all", color="success", outline=True, size="sm"),
-                                    dbc.Button("NO All", id="orders-no-all", color="danger", outline=True, size="sm"),
-                                ],
-                                size="sm",
-                            ),
-                            width="auto",
+                            dbc.Button("Export approved lines as JSON", id="orders-export-json", color="primary"),
+                            md="auto",
                         ),
-                        dbc.Col(
-                            dbc.Button(
-                                "Export decisions as JSON",
-                                id="orders-export-json",
-                                color="primary",
-                                size="sm",
-                            ),
-                            width="auto",
-                        ),
-                        dbc.Col(
-                            dbc.Div(id="orders-summary", className="small text-muted"),
-                            width="auto",
-                        ),
+                        dbc.Col(html.Div(id="orders-summary", children=_orders_summary(rows)), md=True),
                     ],
                     className="g-2 align-items-center mt-3",
                 ),
@@ -838,7 +806,7 @@ def _suggested_orders(week: str, store: str | None) -> dbc.Container:
     table = dash_table.DataTable(
         id="orders-table",
         columns=[
-                        {"name": "Decision", "id": "Approve", "presentation": "dropdown"},
+            {"name": "Approve (Yes/No)", "id": "Approve", "presentation": "dropdown"},
             {"name": "Store", "id": "Store"},
             {"name": "Dynamics Code", "id": "Dynamics_Code"},
             {"name": "Product", "id": "Product"},
@@ -852,17 +820,15 @@ def _suggested_orders(week: str, store: str | None) -> dbc.Container:
         ],
         data=rows,
         editable=True,
-                row_selectable="multi",
-                selected_rows=[],
-                dropdown={
-                    "Approve": {
-                        "options": [
-                            {"label": "Pending", "value": "Pending"},
-                            {"label": "Yes", "value": "Yes"},
-                            {"label": "No", "value": "No"},
-                        ]
-                    }
-                },
+        dropdown={
+            "Approve": {
+                "options": [
+                    {"label": "", "value": ""},
+                    {"label": "Yes", "value": "Yes"},
+                    {"label": "No", "value": "No"},
+                ]
+            }
+        },
         filter_action="native",
         sort_action="native",
         page_action="native",
@@ -878,46 +844,21 @@ def _suggested_orders(week: str, store: str | None) -> dbc.Container:
             "width": "120px",
             "maxWidth": "360px",
         },
-                style_cell_conditional=[
-                    {
-                        "if": {"column_id": "Approve"},
-                        "textAlign": "center",
-                        "fontWeight": "700",
-                        "minWidth": "140px",
-                        "width": "140px",
-                        "maxWidth": "160px",
-                    }
-                ],
         style_header={
             "backgroundColor": "#0b1533",
             "color": "white",
             "fontWeight": "700",
         },
-                style_data_conditional=[
-                    {
-                        "if": {"filter_query": '{Approve} = "Yes"', "column_id": "Approve"},
-                        "backgroundColor": "#16a34a",
-                        "color": "white",
-                        "fontWeight": "700",
-                    },
-                    {
-                        "if": {"filter_query": '{Approve} = "No"', "column_id": "Approve"},
-                        "backgroundColor": "#dc2626",
-                        "color": "white",
-                        "fontWeight": "700",
-                    },
-                    {
-                        "if": {"filter_query": '{Approve} = "Pending"', "column_id": "Approve"},
-                        "backgroundColor": "#64748b",
-                        "color": "white",
-                        "fontWeight": "700",
-                    },
-                    {
-                        "if": {"filter_query": '{Pack_Source} = "Default"'},
-                        "color": "#b91c1c",
-                        "fontWeight": "700",
-                    },
-                ],
+        style_data_conditional=[
+            {
+                "if": {"filter_query": '{Approve} = "Yes"'},
+                "fontWeight": "700",
+            },
+            {
+                "if": {"filter_query": '{Pack_Source} = "Default"'},
+                "color": "#b45309",
+            },
+        ],
     )
 
     return dbc.Container([controls, table], fluid=True)
@@ -1140,33 +1081,19 @@ def create_epos_dash_app(server):
     @app.callback(
         Output("orders-table", "data"),
         Output("orders-summary", "children"),
-        Input("orders-cover-weeks", "value"),
-        Input("orders-safety-pct", "value"),
+        Input("orders-cover", "value"),
+        Input("orders-safety", "value"),
         Input("orders-default-upc", "value"),
         Input("orders-yes-all", "n_clicks"),
         Input("orders-no-all", "n_clicks"),
-        Input("orders-mark-yes", "n_clicks"),
-        Input("orders-mark-no", "n_clicks"),
-        Input("orders-mark-pending", "n_clicks"),
         Input("orders-table", "data_timestamp"),
-        Input("epos-context", "data"),
+        State("orders-context", "data"),
         State("orders-table", "data"),
-        State("orders-table", "selected_rows"),
         prevent_initial_call=True,
     )
-    def _update_orders(cover, safety, default_upc, yes_all, no_all, mark_yes, mark_no, mark_pending, table_ts, ctx_data, current_rows, selected_rows):
+    def _update_orders(cover, safety, default_upc, yes_all, no_all, table_ts, ctx_data, current_rows):
         trig = ctx.triggered_id
         rows = current_rows or []
-        selected = selected_rows or []
-        if trig in ("orders-mark-yes", "orders-mark-no", "orders-mark-pending"):
-            if not rows or not selected:
-                return no_update, no_update
-            val = "Yes" if trig == "orders-mark-yes" else ("No" if trig == "orders-mark-no" else "Pending")
-            for idx in selected:
-                if 0 <= idx < len(rows):
-                    rows[idx]["Approve"] = val
-            return rows, _orders_summary(rows)
-
 
         if trig in ("orders-yes-all", "orders-no-all") and rows:
             val = "Yes" if trig == "orders-yes-all" else "No"
@@ -1193,7 +1120,6 @@ def create_epos_dash_app(server):
                     su = 0
                 raw = int(math.ceil(su / upc)) if (su > 0 and upc > 0) else 0
                 r["Suggested_Cases"] = int(math.ceil(raw / mult) * mult) if raw > 0 else 0
-                r["Suggested_Units"] = int(r["Suggested_Cases"] * upc)
             return rows, _orders_summary(rows)
 
         # Recompute from source data (rate-of-sale → cases)
@@ -1268,8 +1194,6 @@ def create_epos_dash_app(server):
                 su = 0
             raw = int(math.ceil(su / upc)) if (su > 0 and upc > 0) else 0
             cases = int(math.ceil(raw / mult) * mult) if raw > 0 else 0
-            # Round units to match the case rounding (exported units & cases always align)
-            su = int(cases * upc)
 
             lines.append(
                 {

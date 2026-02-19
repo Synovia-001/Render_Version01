@@ -42,3 +42,8 @@
 - EPOS Dash: static skeleton layout + callback renderer to prevent 'Error loading layout' on component-suites requests.
 - EPOS Dash: safe_build_layout wrapper logs tracebacks and shows a friendly error panel instead of crashing.
 - EPOS Dash: initialize base/cal variables defensively.
+
+## V3.7 (2026-02-19)
+- New: Fusion Solas module scaffold at /module/Solas/.
+- Config: add SOLAS_DB + SOLAS_SCHEMA env vars.
+- SQL: seed script to create module and grant access (sql/seed/seed_solas_module_access.sql).

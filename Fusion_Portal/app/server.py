@@ -1,4 +1,5 @@
 from flask import Flask, redirect, request
+from pathlib import Path
 from flask_login import current_user
 
 from .auth import auth_bp, login_manager
@@ -6,7 +7,8 @@ from .config import load_settings
 
 def create_server() -> Flask:
     settings = load_settings()
-    server = Flask(__name__, template_folder="templates")
+    assets_dir = Path(__file__).resolve().parents[1] / "assets"
+    server = Flask(__name__, template_folder="templates", static_folder=str(assets_dir), static_url_path="/assets")
     server.secret_key = settings.secret_key
 
     login_manager.init_app(server)
@@ -25,6 +27,20 @@ def create_server() -> Flask:
     @server.get("/module/EPOS")
     def epos_redirect():
         return redirect("/module/EPOS/")
+
+    # Redirect /module/Solas (no slash) -> /module/Solas/
+    @server.get("/module/Solas")
+    def solas_redirect():
+        return redirect("/module/Solas/")
+
+    # Backwards-compat redirect for older module naming
+    @server.get("/module/Fusion_Solas")
+    def solas_legacy_redirect():
+        return redirect("/module/Solas/")
+
+    @server.get("/module/Fusion_Solas/")
+    def solas_legacy_redirect2():
+        return redirect("/module/Solas/")
 
     @server.before_request
     def require_login():

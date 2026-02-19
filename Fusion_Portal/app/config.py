@@ -16,6 +16,8 @@ class Settings:
     # Module databases
     core_db: str = ""
     epos_db: str = ""
+    solas_db: str = ""
+    solas_schema: str = "dbo"
 
 def load_settings() -> Settings:
     ini_path = os.getenv("FUSION_INI_PATH")
@@ -48,6 +50,8 @@ def load_settings() -> Settings:
 
     core_db = os.getenv("CORE_DB") or os.getenv("Core_DB") or ""
     epos_db = os.getenv("EPOS_DB") or os.getenv("Epos_DB") or ""
+    solas_db = os.getenv("SOLAS_DB") or os.getenv("Solas_DB") or ""
+    solas_schema = os.getenv("SOLAS_SCHEMA") or os.getenv("Solas_SCHEMA") or "dbo"
 
     return Settings(
         db_driver=db_driver,
@@ -60,4 +64,6 @@ def load_settings() -> Settings:
         secret_key=os.getenv("SECRET_KEY") or "change-me",
         core_db=core_db,
         epos_db=epos_db,
+        solas_db=solas_db,
+        solas_schema=solas_schema,
     )

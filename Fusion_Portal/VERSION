@@ -1,2 +1,3 @@
-Fusion_Portal_V3.3
-Build: 2026-02-18
+Fusion_Portal_V3.7
+Build: 2026-02-19
+Notes: Adds Fusion Solas module scaffold + env var SOLAS_DB/SOLAS_SCHEMA.
